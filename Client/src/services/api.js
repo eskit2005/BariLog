@@ -171,3 +171,59 @@ export const deleteApartment = (id) => {
     method: 'DELETE',
   });
 };
+
+// ----------------- Document Repository API (Feature 03) -----------------
+// Building Rules
+export const getBuildingRules = () => apiFetch('/documents/rules');
+
+export const createBuildingRule = (payload) =>
+  apiFetch('/documents/rules', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+// Notices
+export const getNotices = () => apiFetch('/documents/notices');
+
+export const createNotice = (payload) =>
+  apiFetch('/documents/notices', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const deleteNotice = (id) =>
+  apiFetch(`/documents/notices/${id}`, {
+    method: 'DELETE',
+  });
+
+// Complaints
+export const getComplaints = () => apiFetch('/documents/complaints');
+
+export const createComplaint = (payload) =>
+  apiFetch('/documents/complaints', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const resolveComplaint = (id, payload) =>
+  apiFetch(`/documents/complaints/${id}/resolve`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+
+// Maintenance Agreements
+export const getMaintenanceAgreements = () => apiFetch('/documents/maintenance');
+
+export const createMaintenanceAgreement = (payload) =>
+  apiFetch('/documents/maintenance', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const markAgreementNoted = (id) =>
+  apiFetch(`/documents/maintenance/${id}/noted`, {
+    method: 'PATCH',
+  });
+
+// Expiry reminders (notices + agreements expiring within N days)
+export const getExpiryReminders = (days = 30) => apiFetch(`/documents/expiring?days=${days}`);
