@@ -19,8 +19,8 @@ class AuthUnitTests {
     @BeforeEach
     void setUp() {
         JwtConfig config = new JwtConfig();
-        // A valid 256-bit base64 secret
-        config.setSecret("etXNsB587RXPk/iV6ulz0n0Kujo3t8G0JMprES5E8Co=");
+        // A dedicated 256-bit base64 secret for unit test suite
+        config.setSecret("dGVzdFNlY3JldEtleUZvckJhcmlMb2dVbml0VGVzdHMyNTZiaXRzIQ==");
         config.setAccessTokenExpiration(600);
         config.setRefreshTokenExpiration(604800);
         jwtService = new JwtService(config);

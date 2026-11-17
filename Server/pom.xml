@@ -153,9 +153,9 @@
 				<artifactId>flyway-maven-plugin</artifactId>
 				<version>11.17.0</version>
 				<configuration>
-					<url>jdbc:postgresql://localhost:5432/bariLog</url>
-					<user>postgres</user>
-					<password>akash</password>
+					<url>${env.DB_URL:jdbc:postgresql://localhost:5432/bariLog}</url>
+					<user>${env.DB_USERNAME:postgres}</user>
+					<password>${env.DB_PASSWORD:}</password>
 					<cleanDisabled>false</cleanDisabled>
 				</configuration>
 			</plugin>

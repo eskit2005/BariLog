@@ -33,3 +33,5 @@ build/
 
 ### Environment & Secrets ###
 .env
+.env.*
+*.env
