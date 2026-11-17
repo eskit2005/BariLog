@@ -1,15 +1,20 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Users, Receipt, Wrench, Shield, ArrowRight } from 'lucide-react';
+import { Building2, Users, Receipt, Wrench, Shield, ArrowRight, ShieldCheck } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
 
 export const Overview = () => {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
+  const isManager = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
   const modules = [
     {
-      title: 'Apartment Registry & Occupancy',
+      title: isManager ? 'Apartment Registry & Occupancy' : 'Building Directory & Units',
       feature: 'Feature 01 (Active)',
-      desc: 'Physical building elevation, floor wings, unit specs (sqft, BHK), and real-time occupancy status (Vacant / Owner / Rented).',
+      desc: isManager
+        ? 'Physical building elevation, floor wings, unit specs (sqft, BHK), and real-time occupancy status (Vacant / Owner / Rented).'
+        : 'View building elevation layout, flat numbers, physical specifications, and authorized community directory.',
       icon: Building2,
       path: '/apartments',
       ready: true,
@@ -45,14 +50,20 @@ export const Overview = () => {
       {/* Welcome Banner */}
       <div style={styles.banner}>
         <div>
-          <span style={styles.badge}>OPERATIONS OVERVIEW</span>
-          <h1 style={styles.bannerTitle}>BariLog Operations Platform</h1>
+          <span style={styles.badge}>
+            {isManager ? 'MANAGEMENT CONSOLE' : 'RESIDENT PORTAL'}
+          </span>
+          <h1 style={styles.bannerTitle}>
+            {isManager ? 'BariLog Operations Platform' : `Welcome, ${user?.name || 'Resident'}`}
+          </h1>
           <p style={styles.bannerSubtitle}>
-            A centralized system for 50–100 apartment communities, replacing WhatsApp complaints and spreadsheet records.
+            {isManager
+              ? 'A centralized system for 50–100 apartment communities, replacing WhatsApp complaints and spreadsheet records.'
+              : 'Your building operations portal. Inspect floor directories, check shared facilities, and keep track of community notices.'}
           </p>
         </div>
         <button onClick={() => navigate('/apartments')} style={styles.bannerBtn}>
-          <span>Open Apartment Registry</span>
+          <span>{isManager ? 'Open Apartment Registry' : 'View Building Directory'}</span>
           <ArrowRight size={16} />
         </button>
       </div>

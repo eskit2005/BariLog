@@ -51,6 +51,7 @@ export const AppLayout = () => {
               buildings,
               setBuildings,
               refreshBuildings,
+              user,
             }}
           />
         </main>

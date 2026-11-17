@@ -4,6 +4,22 @@ import { Building2, ChevronDown } from 'lucide-react';
 export const Header = ({ buildings = [], selectedBuildingId, onSelectBuilding, user }) => {
   const currentBuilding = buildings.find((b) => b.id === Number(selectedBuildingId)) || buildings[0];
 
+  const getRoleBadgeStyle = (role) => {
+    switch (role) {
+      case 'MANAGER':
+        return { backgroundColor: '#0D9488', color: '#FFFFFF' };
+      case 'ADMIN':
+        return { backgroundColor: '#4338CA', color: '#FFFFFF' };
+      case 'STAFF':
+        return { backgroundColor: '#0284C7', color: '#FFFFFF' };
+      case 'SECURITY':
+        return { backgroundColor: '#D97706', color: '#FFFFFF' };
+      case 'RESIDENT':
+      default:
+        return { backgroundColor: '#475569', color: '#FFFFFF' };
+    }
+  };
+
   return (
     <header style={styles.header}>
       {/* Left: Building Context Switcher */}
@@ -45,7 +61,9 @@ export const Header = ({ buildings = [], selectedBuildingId, onSelectBuilding, u
           <span style={styles.statusDot}></span>
           <span>Operations Active</span>
         </div>
-        <div style={styles.roleTag}>{user?.role || 'RESIDENT'}</div>
+        <div style={{ ...styles.roleTag, ...getRoleBadgeStyle(user?.role) }}>
+          {user?.role || 'RESIDENT'}
+        </div>
       </div>
     </header>
   );

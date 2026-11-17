@@ -11,15 +11,29 @@ import {
   Clock, 
   ArrowRight, 
   Edit3,
-  Trash2
+  Trash2,
+  ShieldCheck
 } from 'lucide-react';
 import { getOccupancyHistory, deleteApartment } from '../../services/api';
 
-export const UnitSlideOver = ({ isOpen, onClose, apartment, onOpenUpdateOccupancy, onApartmentDeleted }) => {
+export const UnitSlideOver = ({ 
+  isOpen, 
+  onClose, 
+  apartment, 
+  onOpenUpdateOccupancy, 
+  onApartmentDeleted,
+  isManager = false,
+  currentUserId = null
+}) => {
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  const isMyUnit = Boolean(
+    currentUserId && 
+    (apartment?.currentResidentId === currentUserId || apartment?.ownerId === currentUserId)
+  );
 
   useEffect(() => {
     if (apartment?.id && isOpen) {
@@ -95,22 +109,38 @@ export const UnitSlideOver = ({ isOpen, onClose, apartment, onOpenUpdateOccupanc
 
         {/* Content Body */}
         <div style={styles.body}>
-          {/* Action Callout */}
-          <div style={styles.actionCard}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 600 }}>Manage Unit Occupancy</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Move in a tenant, register owner, or vacate unit.
+          {/* Action Callout (Role-Gated) */}
+          {isManager ? (
+            <div style={styles.actionCard}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600 }}>Manage Unit Occupancy</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  Move in a tenant, register owner, or vacate unit.
+                </div>
+              </div>
+              <button
+                onClick={() => onOpenUpdateOccupancy(apartment)}
+                style={styles.actionBtn}
+              >
+                <Edit3 size={14} />
+                <span>Change Status</span>
+              </button>
+            </div>
+          ) : (
+            <div style={styles.residentBanner}>
+              <ShieldCheck size={18} color="var(--brand-primary)" style={{ flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {isMyUnit ? 'Your Registered Flat' : 'Physical Unit Registry'}
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  {isMyUnit 
+                    ? 'You are assigned as the active occupant of this unit.' 
+                    : 'Occupancy and tenancy modifications are authorized by building management.'}
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => onOpenUpdateOccupancy(apartment)}
-              style={styles.actionBtn}
-            >
-              <Edit3 size={14} />
-              <span>Change Status</span>
-            </button>
-          </div>
+          )}
 
           {/* Section: Specifications */}
           <div style={styles.section}>
@@ -242,21 +272,23 @@ export const UnitSlideOver = ({ isOpen, onClose, apartment, onOpenUpdateOccupanc
             )}
           </div>
 
-          {/* Section: Danger Zone (Unit Removal) */}
-          <div style={styles.dangerSection}>
-            {deleteError && <div style={styles.deleteError}>{deleteError}</div>}
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              style={styles.deleteBtn}
-            >
-              <Trash2 size={14} />
-              <span>{deleting ? 'Removing Unit...' : 'Delete Apartment Unit'}</span>
-            </button>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
-              Only vacant units can be removed from registry.
-            </span>
-          </div>
+          {/* Section: Danger Zone (Unit Removal - Managers Only) */}
+          {isManager && (
+            <div style={styles.dangerSection}>
+              {deleteError && <div style={styles.deleteError}>{deleteError}</div>}
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={styles.deleteBtn}
+              >
+                <Trash2 size={14} />
+                <span>{deleting ? 'Removing Unit...' : 'Delete Apartment Unit'}</span>
+              </button>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
+                Only vacant units can be removed from registry.
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -345,6 +377,15 @@ const styles = {
     fontWeight: 600,
     fontSize: '12px',
     whiteSpace: 'nowrap',
+  },
+  residentBanner: {
+    padding: '14px 16px',
+    borderRadius: '10px',
+    backgroundColor: 'var(--bg-subtle)',
+    border: '1px solid var(--border-hairline)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
   },
   section: {
     display: 'flex',

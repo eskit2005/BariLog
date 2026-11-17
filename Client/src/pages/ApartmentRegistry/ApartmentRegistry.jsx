@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { 
   Plus, 
@@ -9,8 +9,11 @@ import {
   Layers, 
   Building as BuildingIcon, 
   Home, 
-  AlertCircle 
+  AlertCircle,
+  ShieldCheck,
+  Eye
 } from 'lucide-react';
+import { AuthContext } from '../../context/AuthContext';
 import { 
   getApartments, 
   getFloors, 
@@ -23,6 +26,9 @@ import UpdateOccupancyModal from '../../components/modals/UpdateOccupancyModal';
 import UnitSlideOver from '../../components/apartment/UnitSlideOver';
 
 export const ApartmentRegistry = () => {
+  const { user } = useContext(AuthContext);
+  const isManager = user?.role === 'MANAGER' || user?.role === 'ADMIN';
+
   const { 
     selectedBuildingId, 
     setSelectedBuildingId, 
@@ -116,26 +122,32 @@ export const ApartmentRegistry = () => {
         <h2 style={{ fontSize: '20px', fontWeight: 700, marginTop: '16px' }}>
           Welcome to BariLog
         </h2>
-        <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '8px 0 20px' }}>
-          No residential buildings are registered yet. Set up your building and floors to start managing units and occupancy.
+        <p style={{ color: 'var(--text-secondary)', maxWidth: '440px', margin: '8px 0 20px' }}>
+          {isManager
+            ? 'No residential buildings are registered yet. Set up your building and floors to start managing units and occupancy.'
+            : 'No residential buildings are registered in the system yet. Please contact your building management or committee.'}
         </p>
-        <button
-          onClick={() => setIsCreateBuildingOpen(true)}
-          style={styles.primaryBtn}
-        >
-          <Plus size={16} /> Register First Building
-        </button>
-        <CreateBuildingModal
-          isOpen={isCreateBuildingOpen}
-          onClose={() => setIsCreateBuildingOpen(false)}
-          onCreated={async (b) => {
-            if (refreshBuildings) {
-              await refreshBuildings(b.id);
-            } else {
-              setBuildings([b]);
-            }
-          }}
-        />
+        {isManager && (
+          <button
+            onClick={() => setIsCreateBuildingOpen(true)}
+            style={styles.primaryBtn}
+          >
+            <Plus size={16} /> Register First Building
+          </button>
+        )}
+        {isManager && (
+          <CreateBuildingModal
+            isOpen={isCreateBuildingOpen}
+            onClose={() => setIsCreateBuildingOpen(false)}
+            onCreated={async (b) => {
+              if (refreshBuildings) {
+                await refreshBuildings(b.id);
+              } else {
+                setBuildings([b]);
+              }
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -145,21 +157,34 @@ export const ApartmentRegistry = () => {
       {/* Page Header & Top Title */}
       <div style={styles.pageHeader}>
         <div>
-          <h1 style={styles.pageTitle}>Apartment Registry & Occupancy</h1>
+          <h1 style={styles.pageTitle}>
+            {isManager ? 'Apartment Registry & Occupancy' : 'Building Directory & Units'}
+          </h1>
           <p style={styles.pageSubtitle}>
-            Physical building elevation, floor wings, and real-time occupancy management.
+            {isManager
+              ? 'Physical building elevation, floor wings, and real-time occupancy management.'
+              : 'Building elevation, flat layout specifications, and community occupancy status.'}
           </p>
         </div>
         <div style={styles.headerActions}>
-          <button onClick={() => setIsCreateBuildingOpen(true)} style={styles.secondaryBtn}>
-            <BuildingIcon size={15} /> New Building
-          </button>
-          <button onClick={() => setIsAddFloorOpen(true)} style={styles.secondaryBtn}>
-            <Layers size={15} /> Add Floor
-          </button>
-          <button onClick={() => setIsCreateAptOpen(true)} style={styles.primaryBtn}>
-            <Plus size={15} /> Register Apartment
-          </button>
+          {isManager ? (
+            <>
+              <button onClick={() => setIsCreateBuildingOpen(true)} style={styles.secondaryBtn}>
+                <BuildingIcon size={15} /> New Building
+              </button>
+              <button onClick={() => setIsAddFloorOpen(true)} style={styles.secondaryBtn}>
+                <Layers size={15} /> Add Floor
+              </button>
+              <button onClick={() => setIsCreateAptOpen(true)} style={styles.primaryBtn}>
+                <Plus size={15} /> Register Apartment
+              </button>
+            </>
+          ) : (
+            <div style={styles.residentHeaderTag}>
+              <ShieldCheck size={16} color="var(--brand-primary)" />
+              <span>Resident Access: View & Emergency Directory</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -318,6 +343,10 @@ export const ApartmentRegistry = () => {
                         const isVacant = apt.occupancyStatus === 'VACANT';
                         const isOwner = apt.occupancyStatus === 'OWNER_OCCUPIED';
                         const isRented = apt.occupancyStatus === 'RENTED';
+                        const isMyUnit = Boolean(
+                          user && 
+                          (apt.currentResidentId === user.id || apt.ownerId === user.id)
+                        );
 
                         let dotColor = '#15803D';
                         let pillText = 'Owner';
@@ -336,11 +365,17 @@ export const ApartmentRegistry = () => {
                         return (
                           <div
                             key={apt.id}
-                            style={styles.unitTile}
+                            style={{
+                              ...styles.unitTile,
+                              ...(isMyUnit ? styles.myUnitTile : {}),
+                            }}
                             onClick={() => handleTileClick(apt)}
                           >
                             <div style={styles.unitTileHeader}>
-                              <div style={styles.unitCode}>{apt.unitNumber}</div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div style={styles.unitCode}>{apt.unitNumber}</div>
+                                {isMyUnit && <span style={styles.myUnitBadge}>YOU</span>}
+                              </div>
                               <span style={{ ...styles.occupancyPill, ...pillClass }}>
                                 <span style={{ ...styles.pillDot, backgroundColor: dotColor }} />
                                 {pillText}
@@ -421,15 +456,27 @@ export const ApartmentRegistry = () => {
                     {apt.currentResidentName || (apt.occupancyStatus === 'VACANT' ? 'Vacant' : '—')}
                   </td>
                   <td style={{ ...styles.td, textAlign: 'right' }}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenOccupancyModal(apt);
-                      }}
-                      style={styles.tableActionBtn}
-                    >
-                      Change Status
-                    </button>
+                    {isManager ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenOccupancyModal(apt);
+                        }}
+                        style={styles.tableActionBtn}
+                      >
+                        Change Status
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleTileClick(apt);
+                        }}
+                        style={styles.tableInspectBtn}
+                      >
+                        View Flat
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -443,6 +490,8 @@ export const ApartmentRegistry = () => {
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}
         apartment={selectedApartment}
+        isManager={isManager}
+        currentUserId={user?.id}
         onOpenUpdateOccupancy={(apt) => {
           setIsDrawerOpen(false);
           handleOpenOccupancyModal(apt);
@@ -804,6 +853,43 @@ const styles = {
     fontSize: '12px',
     fontWeight: 500,
     color: 'var(--text-primary)',
+    cursor: 'pointer',
+  },
+  tableInspectBtn: {
+    padding: '4px 10px',
+    borderRadius: '6px',
+    border: '1px solid var(--border-hairline)',
+    backgroundColor: 'var(--bg-subtle)',
+    fontSize: '12px',
+    fontWeight: 500,
+    color: 'var(--brand-primary)',
+    cursor: 'pointer',
+  },
+  residentHeaderTag: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '8px 14px',
+    borderRadius: '8px',
+    backgroundColor: 'var(--brand-tint)',
+    border: '1px solid #CCFBF1',
+    fontSize: '12.5px',
+    fontWeight: 600,
+    color: 'var(--brand-primary)',
+  },
+  myUnitTile: {
+    borderColor: 'var(--brand-primary)',
+    boxShadow: '0 0 0 1px var(--brand-primary)',
+    backgroundColor: '#F0FDFA',
+  },
+  myUnitBadge: {
+    fontSize: '9.5px',
+    fontWeight: 700,
+    padding: '1px 5px',
+    borderRadius: '4px',
+    backgroundColor: 'var(--brand-primary)',
+    color: '#FFFFFF',
+    letterSpacing: '0.04em',
   },
   emptyState: {
     backgroundColor: 'var(--bg-surface)',
