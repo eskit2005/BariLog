@@ -1,0 +1,76 @@
+:root {
+  /* Surfaces & Neutrals */
+  --bg-canvas: #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F1F5F9;
+  --border-hairline: #E2E8F0;
+  --border-strong: #CBD5E1;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+
+  /* Brand Tokens */
+  --brand-primary: #0D9488;
+  --brand-primary-hover: #0F766E;
+  --brand-tint: #F0FDFA;
+  --accent-amber: #D97706;
+
+  /* Semantic Statuses */
+  --status-occupied-text: #15803D;
+  --status-occupied-bg: #F0FDF4;
+  --status-occupied-border: #BBF7D0;
+
+  --status-rented-text: #0369A1;
+  --status-rented-bg: #F0F9FF;
+  --status-rented-border: #BAE6FD;
+
+  --status-pending-text: #B45309;
+  --status-pending-bg: #FFFBEB;
+  --status-pending-border: #FDE68A;
+
+  --status-vacant-text: #B91C1C;
+  --status-vacant-bg: #FEF2F2;
+  --status-vacant-border: #FECACA;
+
+  /* Typography */
+  --font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+input, select, textarea {
+  font-family: var(--font-body);
+  font-size: 14px;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}

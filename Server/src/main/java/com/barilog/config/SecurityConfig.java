@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/users/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/auth/logout").permitAll()
 
                         // 2. Admin User Management
                         .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole(Role.ADMIN.name(), Role.MANAGER.name())
@@ -72,7 +73,6 @@ public class SecurityConfig {
 
                         // 3. User Self Endpoints
                         .requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/auth/logout").authenticated()
 
                         // 4. Any other requests require authentication
                         .anyRequest().authenticated()
