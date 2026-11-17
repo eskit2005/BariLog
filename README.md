@@ -421,20 +421,21 @@ Authorization: Bearer <token>
 When developing subsequent features (e.g., Feature 04 Resident Directory, Feature 05 Billing, Feature 09 Maintenance):
 
 1. **Database Schema Evolution**:
+   - Don't make any changes to the 'V1' or 'V2' db flyway migration files.
    - Create sequential Flyway migration files in `Server/src/main/resources/db/migration/` (e.g., `V3__maintenance_tickets.sql`).
    - Use snake_case for table and column names in PostgreSQL.
-2. **DTO & Entity Separation**:
+3. **DTO & Entity Separation**:
    - Entities (`entities/`) must never be exposed directly to controllers.
    - Create request/response DTOs in `dtos/request/` and `dtos/response/`.
    - Register MapStruct mappings in `mappers/`.
-3. **Role Enforcement**:
+4. **Role Enforcement**:
    - Protect modifying endpoints using `@PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")`.
    - Protect staff/security endpoints using `@PreAuthorize("hasAnyRole('STAFF', 'MANAGER', 'ADMIN')")`.
-4. **Environment & Credential Safety**:
+5. **Environment & Credential Safety**:
    - **Never commit `.env` files** or hardcode secrets into `pom.xml` or `application.yaml`.
    - Always reference environment variables with sane local fallbacks: `${VARIABLE_NAME:default}`.
    - Update `Server/.env.example` if new environment keys are introduced.
-5. **Frontend Styling Consistency**:
+6. **Frontend Styling Consistency**:
    - Adhere to the design system in [DESIGN.md](file:///Users/ibrahim/Documents/Cse470%20project/CSE470-PROJECT-GROUP-2/DESIGN.md).
    - Use CSS variables (`var(--brand-primary)`, `var(--bg-surface)`, `var(--border-hairline)`).
    - Use the `tabular-nums` class on numeric quantities and financial figures to maintain alignment.
