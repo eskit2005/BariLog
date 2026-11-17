@@ -421,7 +421,6 @@ Authorization: Bearer <token>
 When developing subsequent features (e.g., Feature 04 Resident Directory, Feature 05 Billing, Feature 09 Maintenance):
 
 1. **Database Schema Evolution**:
-   - Never modify committed migrations (`V1`, `V2`).
    - Create sequential Flyway migration files in `Server/src/main/resources/db/migration/` (e.g., `V3__maintenance_tickets.sql`).
    - Use snake_case for table and column names in PostgreSQL.
 2. **DTO & Entity Separation**:
