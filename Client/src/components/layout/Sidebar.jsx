@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   Building2, 
+  FileText, 
   Home, 
   Receipt, 
   Wrench, 
@@ -28,6 +29,7 @@ export const Sidebar = ({ user, onLogout }) => {
   const navItems = [
     { label: 'Overview', to: '/', icon: Home, end: true },
     { label: 'Apartment Registry', to: '/apartments', icon: Building2 },
+    { label: 'Documents & Repository', to: '/documents', icon: FileText },
     { label: 'Finance & Ledger', to: '/finance', icon: Receipt, badge: 'Soon' },
     { label: 'Maintenance & SLA', to: '/maintenance', icon: Wrench, badge: 'Soon' },
     { label: 'Gate & Visitors', to: '/security', icon: ShieldCheck, badge: 'Soon' },
