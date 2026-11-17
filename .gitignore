@@ -1,0 +1,21 @@
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+
+# Build artifacts
+**/target/
+**/build/
+**/dist/
+
+# Node / Frontend (for future client setup)
+**/node_modules/
+
+# Environment files with sensitive credentials
+**/.env
