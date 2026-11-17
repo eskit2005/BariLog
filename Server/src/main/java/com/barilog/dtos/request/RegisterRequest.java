@@ -21,6 +21,9 @@ public class RegisterRequest {
     @Size(min = 6, max = 255, message = "Password must be at least 6 characters")
     private String password;
 
+    @Size(max = 30, message = "Phone number cannot exceed 30 characters")
+    private String phoneNumber;
+
     @NotBlank(message = "Role is required")
     @Pattern(regexp = "ADMIN|MANAGER|RESIDENT|STAFF|SECURITY", message = "Role must be one of: ADMIN, MANAGER, RESIDENT, STAFF, SECURITY")
     private String role;

@@ -1,5 +1,6 @@
 package com.barilog.entities;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.DiscriminatorValue;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -12,4 +13,7 @@ import lombok.Setter;
 @Table(name = "staff")
 @DiscriminatorValue("STAFF")
 public class Staff extends User {
+
+    @Column(name = "specialization", length = 100)
+    private String specialization;
 }

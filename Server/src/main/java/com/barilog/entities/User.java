@@ -29,8 +29,14 @@ public class User {
     @Column(name = "password", nullable = false)
     private String password;
 
+    @Column(name = "phone_number", length = 30)
+    private String phoneNumber;
+
     @Column(name = "role", insertable = false, updatable = false)
     private String role;
+
+    @Column(name = "is_active", nullable = false)
+    private Boolean isActive = true;
 
     @CreationTimestamp
     @Column(name = "created_at", insertable = false, updatable = false)

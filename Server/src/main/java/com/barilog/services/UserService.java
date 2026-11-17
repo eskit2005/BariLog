@@ -43,42 +43,27 @@ public class UserService {
         switch (role) {
             case "ADMIN" -> {
                 Admin admin = new Admin();
-                admin.setName(request.getName());
-                admin.setEmail(request.getEmail());
-                admin.setPassword(encodedPassword);
-                admin.setRole(role);
+                populateBaseUser(admin, request, encodedPassword, role);
                 saved = adminRepository.save(admin);
             }
             case "MANAGER" -> {
                 Manager manager = new Manager();
-                manager.setName(request.getName());
-                manager.setEmail(request.getEmail());
-                manager.setPassword(encodedPassword);
-                manager.setRole(role);
+                populateBaseUser(manager, request, encodedPassword, role);
                 saved = managerRepository.save(manager);
             }
             case "RESIDENT" -> {
                 Resident resident = new Resident();
-                resident.setName(request.getName());
-                resident.setEmail(request.getEmail());
-                resident.setPassword(encodedPassword);
-                resident.setRole(role);
+                populateBaseUser(resident, request, encodedPassword, role);
                 saved = residentRepository.save(resident);
             }
             case "STAFF" -> {
                 Staff staff = new Staff();
-                staff.setName(request.getName());
-                staff.setEmail(request.getEmail());
-                staff.setPassword(encodedPassword);
-                staff.setRole(role);
+                populateBaseUser(staff, request, encodedPassword, role);
                 saved = staffRepository.save(staff);
             }
             case "SECURITY" -> {
                 SecurityStaff sec = new SecurityStaff();
-                sec.setName(request.getName());
-                sec.setEmail(request.getEmail());
-                sec.setPassword(encodedPassword);
-                sec.setRole(role);
+                populateBaseUser(sec, request, encodedPassword, role);
                 saved = securityStaffRepository.save(sec);
             }
             default -> throw new IllegalArgumentException("Unsupported role: " + role);
@@ -87,6 +72,15 @@ public class UserService {
         applicationEventPublisher.publishEvent(new UserRegisteredEvent(saved.getName(), saved.getEmail(), role));
 
         return userMapper.toResponse(saved);
+    }
+
+    private void populateBaseUser(User user, RegisterRequest req, String encodedPassword, String role) {
+        user.setName(req.getName());
+        user.setEmail(req.getEmail());
+        user.setPassword(encodedPassword);
+        user.setPhoneNumber(req.getPhoneNumber());
+        user.setIsActive(true);
+        user.setRole(role);
     }
 
     public List<UserResponse> getAllUsers() {

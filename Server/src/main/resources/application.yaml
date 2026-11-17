@@ -8,9 +8,9 @@ spring:
     name: barilog-server
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/barilog_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/bariLog}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:postgres}
+    password: ${DB_PASSWORD:akash}
     driver-class-name: org.postgresql.Driver
 
   jpa:

@@ -1,5 +1,5 @@
 -- =============================================================================
--- Feature 01: Apartment Registry and Occupancy Management Schema (PostgreSQL)
+-- Migration V2: Feature 01 - Apartment Registry and Occupancy Management Schema (PostgreSQL)
 -- =============================================================================
 
 -- 1. Building details
@@ -41,11 +41,20 @@ CREATE TABLE IF NOT EXISTS apartments (
     parking_slot_number VARCHAR(50),
     utility_meter_number VARCHAR(100),
     occupancy_status VARCHAR(30) NOT NULL DEFAULT 'VACANT',
+    
+    -- Ownership references (Registered User link OR manual contact for off-platform owners)
     owner_id BIGINT,
+    owner_name VARCHAR(150),
+    owner_phone VARCHAR(30),
+    owner_email VARCHAR(150),
+
+    -- Active occupant residing in the unit
     current_resident_id BIGINT,
+
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
     CONSTRAINT uq_building_unit UNIQUE (building_id, unit_number),
     CONSTRAINT chk_occupancy_status CHECK (occupancy_status IN ('VACANT', 'OWNER_OCCUPIED', 'RENTED')),
     CONSTRAINT fk_apartment_building FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE RESTRICT,
@@ -54,7 +63,7 @@ CREATE TABLE IF NOT EXISTS apartments (
     CONSTRAINT fk_apartment_resident FOREIGN KEY (current_resident_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Index for rapid lookups by unit number, occupancy status, and building
+-- Indexes for rapid lookup
 CREATE INDEX IF NOT EXISTS idx_apartments_building_id ON apartments(building_id);
 CREATE INDEX IF NOT EXISTS idx_apartments_occupancy ON apartments(occupancy_status);
 CREATE INDEX IF NOT EXISTS idx_apartments_resident ON apartments(current_resident_id);
