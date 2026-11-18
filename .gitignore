@@ -26,3 +26,7 @@ Thumbs.db
 .env.development.local
 .env.test.local
 .env.production.local
+
+# SQLite local databases (created wherever the backend is started from)
+**/barilog.db
+**/barilog.db-*
