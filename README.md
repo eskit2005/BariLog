@@ -4,8 +4,8 @@
 [![Java](https://img.shields.io/badge/Java-21%20LTS-orange.svg?logo=openjdk)](https://openjdk.org/)
 [![React](https://img.shields.io/badge/React-19.0-blue.svg?logo=react)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-6.4-purple.svg?logo=vite)](https://vitejs.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14%2B-blue.svg?logo=postgresql)](https://www.postgresql.org/)
-[![Flyway](https://img.shields.io/badge/Flyway-11.17-red.svg?logo=flyway)](https://flywaydb.org/)
+[![SQLite](https://img.shields.io/badge/SQLite-3-003B57.svg?logo=sqlite)](https://www.sqlite.org/)
+[![Flyway](https://img.shields.io/badge/Flyway-11.14-red.svg?logo=flyway)](https://flywaydb.org/)
 [![License](https://img.shields.io/badge/License-Academic%20Project-lightgrey.svg)]()
 
 > **BariLog** is a centralized web platform for medium-to-large residential apartment buildings (typically 50–100+ units). It eliminates fragmented communication (WhatsApp groups, ad-hoc spreadsheets, paper gate registers) and provides an integrated, transparent, role-based platform for residents, committee managers, technicians, and security staff.
@@ -70,8 +70,8 @@ flowchart LR
         Repos[Spring Data JPA Repositories]
     end
 
-    subgraph Database["Relational Store (PostgreSQL)"]
-        Flyway[Flyway Migrations V1/V2]
+    subgraph Database["Relational Store (SQLite file)"]
+        Flyway[Flyway Migrations V1–V3]
         Tables[(users, buildings, floors, apartments, occupancy_history)]
     end
 
@@ -87,8 +87,8 @@ flowchart LR
 - **Security**: Spring Security 7 stateless architecture with JJWT (0.12.6)
   - Short-lived signed JWT access token transmitted in the `Authorization: Bearer <token>` header.
   - Long-lived HttpOnly refresh token cookie for transparent session renewal.
-- **Database Persistence**: Spring Data JPA / Hibernate ORM with PostgreSQL driver.
-- **Database Migrations**: Flyway Community edition for deterministic, versioned SQL migrations (`V1__init_auth_schema.sql`, `V2__apartment_registry_schema.sql`).
+- **Database Persistence**: Spring Data JPA / Hibernate ORM with the SQLite JDBC driver; the whole database is one local file, `Server/barilog.db`.
+- **Database Migrations**: Flyway Community edition for deterministic, versioned SQL migrations (`V1__init_auth_schema.sql`, `V2__apartment_registry_schema.sql`, `V3__document_repository_schema.sql`). Migrations run automatically on startup and create the database file if it is missing.
 - **Data Transfer**: MapStruct 1.6.2 and Project Lombok for compile-time boilerplate-free mapping.
 
 ### Frontend
@@ -113,7 +113,7 @@ CSE470-PROJECT-GROUP-2/
 │
 ├── Server/                           # Spring Boot Backend Project
 │   ├── mvnw / mvnw.cmd               # Maven wrapper executable
-│   ├── pom.xml                       # Maven build file (Spring Boot 4, Flyway, JJWT, Postgres)
+│   ├── pom.xml                       # Maven build file (Spring Boot 4, Flyway, JJWT, SQLite)
 │   ├── .env.example                  # Environment template (NO secrets)
 │   ├── .gitignore                    # Backend-specific ignore rules
 │   └── src/
@@ -210,19 +210,11 @@ Feature 01 is fully functional across the backend and frontend:
 ### Prerequisites
 - **Java Development Kit (JDK)**: Version 21 LTS
 - **Node.js**: Version 18+ and `npm`
-- **PostgreSQL**: Version 14 or higher running on `localhost:5432`
+- **No database server needed.** SQLite is embedded; `Server/barilog.db` is created automatically on first run.
 
 ---
 
-### Step 1: Database Setup
-Launch `psql` or pgAdmin and create the database:
-```sql
-CREATE DATABASE "bariLog";
-```
-
----
-
-### Step 2: Backend Configuration & Startup
+### Step 1: Backend Configuration & Startup
 1. Navigate to the `Server` directory:
    ```bash
    cd Server
@@ -231,16 +223,13 @@ CREATE DATABASE "bariLog";
    ```bash
    cp .env.example .env
    ```
-3. Edit `Server/.env` with your local PostgreSQL credentials:
+3. Edit `Server/.env` and set a JWT secret:
    ```env
    # Base64-encoded 256-bit secret (generate with openssl rand -base64 32)
    JWT_SECRET=dGVzdFNlY3JldEtleUZvckJhcmlMb2dVbml0VGVzdHMyNTZiaXRzIQ==
-   DB_URL=jdbc:postgresql://localhost:5432/bariLog
-   DB_USERNAME=postgres
-   DB_PASSWORD=your_postgres_password
    PORT=8080
    ```
-4. Run the unit test suite to verify connectivity and business logic:
+4. Run the unit test suite to verify business logic:
    ```bash
    ./mvnw test
    ```
@@ -248,6 +237,12 @@ CREATE DATABASE "bariLog";
    ```bash
    ./mvnw spring-boot:run
    ```
+
+Flyway creates `Server/barilog.db` on first startup and seeds the 10 standard building rules.
+
+### Reset the local database
+
+Stop the backend, delete `Server/barilog.db`, and start it again. Flyway rebuilds the schema and the 10 seed rules. The file is git-ignored — never commit it.
    *The server starts on `http://localhost:8080` and Flyway will automatically run all migrations (`V1` and `V2`).*
 
 ---
@@ -421,9 +416,11 @@ Authorization: Bearer <token>
 When developing subsequent features (e.g., Feature 04 Resident Directory, Feature 05 Billing, Feature 09 Maintenance):
 
 1. **Database Schema Evolution**:
-   - Don't make any changes to the 'V1' or 'V2' db flyway migration files.
-   - Create sequential Flyway migration files in `Server/src/main/resources/db/migration/` (e.g., `V3__maintenance_tickets.sql`).
-   - Use snake_case for table and column names in PostgreSQL.
+   - Don't make any changes to already-applied Flyway migration files (`V1`–`V3`).
+   - Create sequential Flyway migration files in `Server/src/main/resources/db/migration/` (e.g., `V4__maintenance_tickets.sql`).
+   - Use snake_case for table and column names in SQLite.
+   - Before you have demo data you care about: stop the backend, edit the migration, delete `Server/barilog.db`, restart. Flyway replays everything.
+   - SQLite cannot `ALTER TABLE ... ADD CONSTRAINT` or change a column type; such a change needs a new table + `INSERT INTO new SELECT ... FROM old` + rename, inside a new migration.
 3. **DTO & Entity Separation**:
    - Entities (`entities/`) must never be exposed directly to controllers.
    - Create request/response DTOs in `dtos/request/` and `dtos/response/`.
