@@ -20,6 +20,16 @@ export const Overview = () => {
       ready: true,
     },
     {
+      title: 'Resident & Tenancy Management',
+      feature: 'Feature 02 (Active)',
+      desc: isManager
+        ? 'Resident profiles, Owner vs. Tenant classifications, apartment allocations, tenancy agreements, and move-in/move-out lifecycle.'
+        : 'View assigned apartment profile, lease agreements, move-in inspections, and emergency contact details.',
+      icon: Users,
+      path: '/residents',
+      ready: true,
+    },
+    {
       title: 'Finance & Automated Billing',
       feature: 'Features 05–08',
       desc: 'Area-based monthly service charge generation, online payment records, expense tracking, and resident transparency dashboard.',

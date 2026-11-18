@@ -2,19 +2,22 @@ package com.barilog.repositories;
 
 import com.barilog.entities.Resident;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
-public interface ResidentRepository extends JpaRepository<Resident, Long> {
+public interface ResidentRepository extends JpaRepository<Resident, Long>, JpaSpecificationExecutor<Resident> {
 
-    @Query(value = "SELECT u.id, u.name, u.email, u.password, u.role, u.created_at FROM users u JOIN resident r ON u.id = r.id WHERE u.id = :id", nativeQuery = true)
-    Optional<Resident> findById(@Param("id") Long id);
+    List<Resident> findByResidentType(String residentType);
 
-    @Query(value = "SELECT u.id, u.name, u.email, u.password, u.role, u.created_at FROM users u JOIN resident r ON u.id = r.id", nativeQuery = true)
-    List<Resident> findAll();
+    @Query("SELECT r FROM Resident r WHERE " +
+           "LOWER(r.name) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(r.email) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(r.phoneNumber) LIKE LOWER(CONCAT('%', :query, '%')) OR " +
+           "LOWER(r.nidPassportNumber) LIKE LOWER(CONCAT('%', :query, '%'))")
+    List<Resident> searchResidents(@Param("query") String query);
 }

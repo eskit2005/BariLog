@@ -10,4 +10,6 @@ import java.util.List;
 public interface OccupancyHistoryRepository extends JpaRepository<OccupancyHistory, Long> {
 
     List<OccupancyHistory> findByApartmentIdOrderByCreatedAtDesc(Long apartmentId);
+
+    List<OccupancyHistory> findByNewResidentIdOrPreviousResidentIdOrderByCreatedAtDesc(Long newResidentId, Long previousResidentId);
 }

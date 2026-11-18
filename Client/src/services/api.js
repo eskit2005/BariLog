@@ -227,3 +227,147 @@ export const markAgreementNoted = (id) =>
 
 // Expiry reminders (notices + agreements expiring within N days)
 export const getExpiryReminders = (days = 30) => apiFetch(`/documents/expiring?days=${days}`);
+
+
+// ----------------- User Management (Directory / Selection) -----------------
+export const getAllUsers = () => apiFetch('/users');
+
+// ----------------- Resident & Tenancy Management API (Feature 02) -----------------
+
+// Resident Profiles & Onboarding
+export const getResidents = (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.query) query.append('query', params.query);
+  if (params.classification && params.classification !== 'ALL') query.append('classification', params.classification);
+  if (params.allocationStatus && params.allocationStatus !== 'ALL') query.append('allocationStatus', params.allocationStatus);
+
+  const qs = query.toString();
+  return apiFetch(`/residents${qs ? `?${qs}` : ''}`);
+};
+
+export const getResident = (id) => {
+  if (!id || id === 'null') throw new Error('Resident ID is required');
+  return apiFetch(`/residents/${id}`);
+};
+
+export const registerResident = (payload) =>
+  apiFetch('/residents', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const createResident = (payload) => registerResident(payload);
+
+export const updateResident = (id, payload) => {
+  if (!id || id === 'null') throw new Error('Resident ID is required');
+  return apiFetch(`/residents/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+};
+
+// Apartment Allocation & Move-Out Lifecycle
+export const allocateApartment = (residentId, payload) => {
+  if (!residentId || residentId === 'null') throw new Error('Resident ID is required');
+  return apiFetch(`/residents/${residentId}/allocate`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const processMoveOut = (residentId, payload = {}) => {
+  if (!residentId || residentId === 'null') throw new Error('Resident ID is required');
+  return apiFetch(`/residents/${residentId}/move-out`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+};
+
+// Tenancy Agreements
+export const getTenancyAgreements = (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.apartmentId && params.apartmentId !== 'null') query.append('apartmentId', params.apartmentId);
+  if (params.residentId && params.residentId !== 'null') query.append('residentId', params.residentId);
+  if (params.status && params.status !== 'ALL') query.append('status', params.status);
+  if (params.archived !== undefined && params.archived !== null && params.archived !== 'ALL') query.append('archived', params.archived);
+
+  const qs = query.toString();
+  return apiFetch(`/residents/agreements${qs ? `?${qs}` : ''}`);
+};
+
+export const getTenancyAgreement = (id) => {
+  if (!id || id === 'null') throw new Error('Agreement ID is required');
+  return apiFetch(`/residents/agreements/${id}`);
+};
+
+export const createTenancyAgreement = (payload) =>
+  apiFetch('/residents/agreements', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const updateTenancyAgreement = (id, payload) => {
+  if (!id || id === 'null') throw new Error('Agreement ID is required');
+  return apiFetch(`/residents/agreements/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const terminateTenancyAgreement = (id, reason) => {
+  if (!id || id === 'null') throw new Error('Agreement ID is required');
+  const qs = reason ? `?reason=${encodeURIComponent(reason)}` : '';
+  return apiFetch(`/residents/agreements/${id}/terminate${qs}`, {
+    method: 'PATCH',
+  });
+};
+
+export const getApartmentTenancyHistory = (apartmentId) => {
+  if (!apartmentId || apartmentId === 'null') throw new Error('Apartment ID is required');
+  return apiFetch(`/residents/apartments/${apartmentId}/agreements`);
+};
+
+export const getResidentTenancyHistory = (residentId) => {
+  if (!residentId || residentId === 'null') throw new Error('Resident ID is required');
+  return apiFetch(`/residents/${residentId}/history`);
+};
+
+export const getResidentHistory = (residentId) => getResidentTenancyHistory(residentId);
+
+// Move-In & Move-Out Inspections
+export const getInspections = (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.apartmentId && params.apartmentId !== 'null') query.append('apartmentId', params.apartmentId);
+  if (params.residentId && params.residentId !== 'null') query.append('residentId', params.residentId);
+  if (params.type && params.type !== 'ALL') query.append('type', params.type);
+  if (params.status && params.status !== 'ALL') query.append('status', params.status);
+
+  const qs = query.toString();
+  return apiFetch(`/residents/inspections${qs ? `?${qs}` : ''}`);
+};
+
+export const getInspection = (id) => {
+  if (!id || id === 'null') throw new Error('Inspection ID is required');
+  return apiFetch(`/residents/inspections/${id}`);
+};
+
+export const scheduleInspection = (payload) =>
+  apiFetch('/residents/inspections', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const updateInspectionStatus = (id, payload) => {
+  if (!id || id === 'null') throw new Error('Inspection ID is required');
+  return apiFetch(`/residents/inspections/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+};
+
+export const deleteInspection = (id) => {
+  if (!id || id === 'null') throw new Error('Inspection ID is required');
+  return apiFetch(`/residents/inspections/${id}`, {
+    method: 'DELETE',
+  });
+};
