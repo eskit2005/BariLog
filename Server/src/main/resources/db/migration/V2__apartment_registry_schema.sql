@@ -1,34 +1,34 @@
 -- =============================================================================
--- Migration V2: Feature 01 - Apartment Registry and Occupancy Management Schema (PostgreSQL)
+-- Migration V2: Feature 01 - Apartment Registry and Occupancy Management (SQLite)
 -- =============================================================================
 
 -- 1. Building details
 CREATE TABLE IF NOT EXISTS buildings (
-    id BIGSERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     name VARCHAR(100) NOT NULL,
     address VARCHAR(255) NOT NULL,
     total_floors INT NOT NULL CHECK (total_floors > 0),
     manager_id BIGINT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_building_manager FOREIGN KEY (manager_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- 2. Floor levels and wings
 CREATE TABLE IF NOT EXISTS floors (
-    id BIGSERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     building_id BIGINT NOT NULL,
     floor_number INT NOT NULL,
     block_wing VARCHAR(50) NOT NULL DEFAULT 'Main',
     description VARCHAR(255),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_building_floor_wing UNIQUE (building_id, floor_number, block_wing),
     CONSTRAINT fk_floor_building FOREIGN KEY (building_id) REFERENCES buildings(id) ON DELETE CASCADE
 );
 
 -- 3. Apartment units and occupancy records
 CREATE TABLE IF NOT EXISTS apartments (
-    id BIGSERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     building_id BIGINT NOT NULL,
     floor_id BIGINT NOT NULL,
     unit_number VARCHAR(30) NOT NULL,
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS apartments (
     parking_slot_number VARCHAR(50),
     utility_meter_number VARCHAR(100),
     occupancy_status VARCHAR(30) NOT NULL DEFAULT 'VACANT',
-    
+
     -- Ownership references (Registered User link OR manual contact for off-platform owners)
     owner_id BIGINT,
     owner_name VARCHAR(150),
@@ -51,9 +51,9 @@ CREATE TABLE IF NOT EXISTS apartments (
     -- Active occupant residing in the unit
     current_resident_id BIGINT,
 
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN NOT NULL DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT uq_building_unit UNIQUE (building_id, unit_number),
     CONSTRAINT chk_occupancy_status CHECK (occupancy_status IN ('VACANT', 'OWNER_OCCUPIED', 'RENTED')),
@@ -70,7 +70,7 @@ CREATE INDEX IF NOT EXISTS idx_apartments_resident ON apartments(current_residen
 
 -- 4. Occupancy transition audit history
 CREATE TABLE IF NOT EXISTS occupancy_history (
-    id BIGSERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     apartment_id BIGINT NOT NULL,
     from_status VARCHAR(30) NOT NULL,
     to_status VARCHAR(30) NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS occupancy_history (
     changed_by_user_id BIGINT NOT NULL,
     reason_or_notes TEXT,
     effective_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_history_from_status CHECK (from_status IN ('INITIAL', 'VACANT', 'OWNER_OCCUPIED', 'RENTED')),
     CONSTRAINT chk_history_to_status CHECK (to_status IN ('VACANT', 'OWNER_OCCUPIED', 'RENTED')),
     CONSTRAINT fk_history_apartment FOREIGN KEY (apartment_id) REFERENCES apartments(id) ON DELETE CASCADE,
