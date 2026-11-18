@@ -227,3 +227,40 @@ export const markAgreementNoted = (id) =>
 
 // Expiry reminders (notices + agreements expiring within N days)
 export const getExpiryReminders = (days = 30) => apiFetch(`/documents/expiring?days=${days}`);
+
+// ----------------- Service Charges API (Feature 05) -----------------
+export const getChargeRules = (buildingId) => {
+  if (!buildingId || buildingId === 'null') return Promise.resolve([]);
+  return apiFetch(`/charge-rules?buildingId=${buildingId}`);
+};
+
+export const createChargeRule = (payload) =>
+  apiFetch('/charge-rules', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+export const setChargeRuleActive = (id, value) =>
+  apiFetch(`/charge-rules/${id}/active?value=${value}`, {
+    method: 'PATCH',
+  });
+
+export const deleteChargeRule = (id) =>
+  apiFetch(`/charge-rules/${id}`, {
+    method: 'DELETE',
+  });
+
+export const generateServiceCharges = (buildingId, month) =>
+  apiFetch('/service-charges/generate', {
+    method: 'POST',
+    body: JSON.stringify({ buildingId, month }),
+  });
+
+export const getServiceCharges = (buildingId, month) => {
+  if (!buildingId || buildingId === 'null') return Promise.resolve([]);
+  const query = new URLSearchParams({ buildingId });
+  if (month) query.append('month', month);
+  return apiFetch(`/service-charges?${query.toString()}`);
+};
+
+export const getMyServiceCharges = () => apiFetch('/service-charges/my');

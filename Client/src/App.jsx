@@ -7,6 +7,7 @@ import Register from './pages/Auth/Register';
 import ApartmentRegistry from './pages/ApartmentRegistry/ApartmentRegistry';
 import Overview from './pages/Overview/Overview';
 import DocumentRepository from './pages/DocumentRepository/DocumentRepository';
+import ServiceCharges from './pages/ServiceCharges/ServiceCharges';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
@@ -49,6 +50,7 @@ export const App = () => {
             <Route index element={<Overview />} />
             <Route path="apartments" element={<ApartmentRegistry />} />
             <Route path="documents" element={<DocumentRepository />} />
+            <Route path="finance" element={<ServiceCharges />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

@@ -30,7 +30,7 @@ export const Sidebar = ({ user, onLogout }) => {
     { label: 'Overview', to: '/', icon: Home, end: true },
     { label: 'Apartment Registry', to: '/apartments', icon: Building2 },
     { label: 'Documents & Repository', to: '/documents', icon: FileText },
-    { label: 'Finance & Ledger', to: '/finance', icon: Receipt, badge: 'Soon' },
+    { label: 'Finance & Ledger', to: '/finance', icon: Receipt },
     { label: 'Maintenance & SLA', to: '/maintenance', icon: Wrench, badge: 'Soon' },
     { label: 'Gate & Visitors', to: '/security', icon: ShieldCheck, badge: 'Soon' },
     { label: 'Audit & Analytics', to: '/analytics', icon: BarChart3, badge: 'Soon' },
