@@ -35,3 +35,9 @@ build/
 .env
 .env.*
 *.env
+
+### SQLite local database (never commit: binary merge conflicts) ###
+barilog.db
+barilog.db-journal
+barilog.db-wal
+barilog.db-shm
