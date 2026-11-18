@@ -8,17 +8,17 @@ spring:
     name: barilog-server
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/bariLog}
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:}
-    driver-class-name: org.postgresql.Driver
+    # foreign_keys=on is REQUIRED: SQLite ignores ON DELETE CASCADE/RESTRICT without it.
+    # busy_timeout stops "database is locked" errors during local dev.
+    url: "jdbc:sqlite:barilog.db?foreign_keys=on&busy_timeout=5000"
+    driver-class-name: org.sqlite.JDBC
 
   jpa:
     show-sql: true
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.community.dialect.SQLiteDialect
 
   jwt:
     secret: ${JWT_SECRET}
