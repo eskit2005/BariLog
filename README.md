@@ -79,7 +79,7 @@ flowchart LR
     end
 
     subgraph Database["Relational Store (SQLite file)"]
-        Flyway[Flyway Migrations V1–V3]
+        Flyway[Flyway Migrations V1–V4]
         Tables[(users, buildings, floors, apartments, occupancy_history, building_rules, notices, complaints, maintenance_agreements)]
     end
 
@@ -138,7 +138,7 @@ BariLog/
 │       │   │   └── services/         # AuthService, BuildingService, ApartmentService, UserService, DocumentService
 │       │   └── resources/
 │       │       ├── application.yaml  # Spring configuration referencing env variables
-│       │       └── db/migration/     # Flyway SQL schema scripts (V1–V3)
+│       │       └── db/migration/     # Flyway SQL schema scripts (V1–V4)
 │       └── test/                     # Unit test suites (ApartmentServiceTest, BuildingServiceTest, AuthUnitTests)
 │
 └── Client/                           # React + Vite Frontend Project
@@ -210,7 +210,7 @@ Statuses describe this checkout. Existing assignees are retained. Partial implem
 | **A. Apartment & Resident** | **01** | **Apartment Registry & Occupancy Management** | **Ibrahim** | **Implemented** |
 | | 02 | Resident and Tenancy Management | — | Partial: apartment/user links only |
 | | 03 | Digital Document Repository | — | Partial: structured records; no file storage |
-| | **04** | **Resident Directory & Emergency Contacts** | **Ilham** | **Assigned; dedicated feature not implemented** |
+| | **04** | **Resident Directory & Emergency Contacts** | **Ilham** | **Implemented: directory, consent and emergency access** |
 | **B. Finance & Transparency** | 05 | Automated Monthly Service Charge Generation | — | Planned |
 | | 06 | Bill Payment & Digital Receipt Management | — | Planned |
 | | 07 | Expense & Budget Category Tracking | — | Planned |
@@ -264,11 +264,11 @@ Statuses describe this checkout. Existing assignees are retained. Partial implem
    ./mvnw spring-boot:run
    ```
 
-When run from `Server/`, Flyway creates `Server/barilog.db`, applies V1–V3, and seeds the 10 standard building rules. The server defaults to `http://localhost:8080`.
+When run from `Server/`, Flyway creates `Server/barilog.db`, applies V1–V4, and seeds the 10 standard building rules. The server defaults to `http://localhost:8080`.
 
 ### Reset the local database
 
-For a disposable local database only: stop the backend, back up anything needed, delete the database file used by that process, and start it again. This removes all local accounts and records. Flyway rebuilds V1–V3 and the 10 seed rules. Database files are git-ignored.
+For a disposable local database only: stop the backend, back up anything needed, delete the database file used by that process, and start it again. This removes all local accounts and records. Flyway rebuilds V1–V4 and the 10 seed rules. Database files are git-ignored.
 
 ---
 
@@ -294,8 +294,8 @@ For a disposable local database only: stop the backend, back up anything needed,
 
 ### 1. Manager Onboarding & Flat Creation
 
-1. Open `http://localhost:5173/register` in your browser.
-2. Fill out your name, email, password, and select **"Building Manager / Committee Member"**.
+1. Use an existing trusted manager account; public registration creates resident accounts only.
+2. Obtain that account through trusted local/administrator provisioning if none exists.
 3. Sign in on the `/login` screen.
 4. You will be greeted with the **Building Elevation View** on `/apartments`.
 5. Click **"New Building"** → Name: `Green Valley Tower A`, Address: `Road 12, Banani`, Total Floors: `10`.
@@ -308,10 +308,10 @@ For a disposable local database only: stop the backend, back up anything needed,
 ### 2. Resident Experience (Role-Gated)
 
 1. Log out using the sidebar sign-out icon (redirects immediately to `/login`).
-2. Register a second account with role **"Resident / Apartment Tenant"**.
+2. Register a second account; the public form creates a resident account.
 3. Log in as the resident. Notice:
    - Administrative buttons (`New Building`, `Add Floor`, `Register Apartment`) are automatically hidden.
-   - The header displays a **"Resident Access: View & Emergency Directory"** badge. This is UI wording; the dedicated emergency directory is still planned.
+   - The header displays a **"Resident Access: View & Emergency Directory"** badge. Open `/directory` for the implemented directory and emergency contacts.
    - Opening an apartment drawer displays specifications in read-only mode with the **"Delete Unit"** and **"Change Status"** controls hidden.
 
 ---
@@ -335,7 +335,7 @@ Content-Type: application/json
   "email": "sarah@example.com",
   "password": "Password123!",
   "phoneNumber": "+8801700112233",
-  "role": "MANAGER"
+  "role": "RESIDENT"
 }
 ```
 
@@ -507,3 +507,16 @@ When developing subsequent features (e.g., Feature 04 Resident Directory, Featur
    - Adhere to the design system in [DESIGN.md](DESIGN.md).
    - Use CSS variables (`var(--brand-primary)`, `var(--bg-surface)`, `var(--border-hairline)`).
    - Use the `tabular-nums` class on numeric quantities and financial figures to maintain alignment.
+
+
+## Resident Directory (Feature 04)
+
+Open `/directory` to search current residents in an authorized building. Residents control three independent sharing settings, hidden from peers by default. Managers/admins maintain optional emergency records; building managers and assigned security retain emergency access. Managers assign existing security account IDs to their own buildings; admins can associate a manager with a building. Existing apartment contact responses follow the same privacy rules.
+
+The next backend startup applies Flyway V4 without resetting existing records. Public registration accepts `RESIDENT` only; existing manager/admin/security accounts still log in. Privileged account provisioning for new installations is a separate administrative requirement. Earlier examples showing privileged self-registration are superseded by this restriction.
+
+Directory API: `GET /api/directory/buildings`; `GET|PUT /api/directory/me/preferences`; `GET /api/buildings/{id}/directory`; `GET|PUT /api/buildings/{id}/directory/{residentId}/emergency`; `GET /api/buildings/{id}/security-assignments`; `PUT|DELETE /api/buildings/{id}/security-assignments/{securityUserId}`; admin-only `PUT /api/buildings/{id}/manager` with `managerId`.
+
+See [verification and usage](docs/verification/feature-04-resident-directory.md) for commands, tested scope, and manual acceptance checks.
+
+Study the implementation with the [Feature 04 learning guide](docs/learning/feature-04-learning-guide.md), or its [rendered-diagram edition](docs/learning/feature-04-learning-guide-rendered.md). It includes source links, request flows, database relationships, privacy decisions, and exercises.

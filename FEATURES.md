@@ -10,7 +10,7 @@ This file defines the intended 20-feature product scope. [README.md](README.md) 
 
 Current foundations include registration/login, JWT access tokens, refresh cookies, role checks, and user APIs. Application pages are Overview (`/`), Apartment Registry (`/apartments`), and Documents (`/documents`), plus login/register. Other sidebar modules are placeholders. Updates appear after fetches or actions; no live push transport is implemented.
 
-Document records are filtered by role/submitter but have no building association or filtering by the selected building. Authenticated registry reads expose directory data without opt-in contact visibility; this does not fulfill Feature 04's privacy requirements.
+Document records are filtered by role/submitter but have no building association or filtering by the selected building. Feature 04 adds consent-aware contact responses and assigned-security building scope.
 
 ---
 
@@ -71,8 +71,8 @@ Document records are filtered by role/submitter but have no building association
   * Granular role-based view/download permissions (public, resident-only, committee-only).
   * Document expiration tracking and alert reminders (e.g., lift license renewal, fire inspection expiry).
 
-* **04. Resident Directory and Emergency Contacts** `[Assigned: Ilham]` `[Planned]`
-  * **Current:** Owner and occupant names/contact details are shown in apartment drawers. There is no dedicated resident directory, opt-in contact visibility, blood-group/next-of-kin/physician registry, or emergency contact workflow. Ilham remains the assignee; no dedicated implementation was found in this checkout.
+* **04. Resident Directory and Emergency Contacts** `[Assigned: Ilham]` `[Implemented]`
+  * **Current:** `/directory` provides a building-scoped resident phonebook, separate default-off phone/email/emergency sharing preferences, and optional blood group, next-of-kin and physician records. Managers/admins maintain emergency profiles; assigned security has read access regardless of peer consent. Security assignment/revocation and admin manager association are included. Existing apartment/user responses respect contact privacy. Backend and transport tests and a client build cover this implementation; live push/alerts and broader privileged-account provisioning remain outside scope.
   * Controlled, privacy-conscious resident phonebook (opt-in phone/email visibility).
   * Emergency contacts register (blood group, emergency next-of-kin, physician).
   * One-click emergency contact access for building managers and security personnel.

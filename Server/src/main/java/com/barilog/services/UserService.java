@@ -29,9 +29,11 @@ public class UserService {
     private final SecurityStaffRepository securityStaffRepository;
     private final UserMapper userMapper;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final AuthService authService;
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
+        if (!"RESIDENT".equals(request.getRole())) throw new IllegalArgumentException("Public registration creates resident accounts only");
         if (userRepository.countByEmail(request.getEmail()) > 0) {
             throw new DuplicateResourceException("Email already in use: " + request.getEmail());
         }
@@ -85,7 +87,11 @@ public class UserService {
 
     public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(userMapper::toResponse)
+                .map(u -> {
+                    UserResponse dto = userMapper.toResponse(u);
+                    if (!"ADMIN".equals(authService.getLoggedUser().getRole())) { dto.setEmail(null); dto.setPhoneNumber(null); dto.setIsActive(null); dto.setCreatedAt(null); }
+                    return dto;
+                })
                 .toList();
     }
 

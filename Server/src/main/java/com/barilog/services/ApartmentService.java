@@ -29,9 +29,18 @@ public class ApartmentService {
     private final ApartmentMapper apartmentMapper;
     private final OccupancyHistoryMapper occupancyHistoryMapper;
     private final AuthService authService;
+    private final DirectoryAccessService directoryAccess;
+    private final ContactVisibilityService contactVisibility;
+
+    private ApartmentResponse response(Apartment apartment) {
+        User actor = directoryAccess.currentActor();
+        if ("SECURITY".equals(actor.getRole())) directoryAccess.requireReadAccess(actor, apartment.getBuilding().getId());
+        return contactVisibility.redactApartment(actor, apartment, apartmentMapper.toResponse(apartment));
+    }
 
     @Transactional
     public ApartmentResponse createApartment(ApartmentRequest request) {
+        directoryAccess.requireManagementAccess(directoryAccess.currentActor(), request.getBuildingId());
         Building building = buildingRepository.findById(request.getBuildingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found with ID: " + request.getBuildingId()));
 
@@ -95,16 +104,32 @@ public class ApartmentService {
         User currentUser = authService.getLoggedUser();
         recordHistory(saved, "INITIAL", saved.getOccupancyStatus().name(), null, saved.getCurrentResident(), currentUser, "Initial registration of unit into building registry", LocalDate.now());
 
-        return apartmentMapper.toResponse(saved);
+        return response(saved);
     }
 
     public ApartmentResponse getApartmentById(Long id) {
         Apartment apt = apartmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with ID: " + id));
-        return apartmentMapper.toResponse(apt);
+        return response(apt);
     }
 
     public List<ApartmentResponse> getApartments(Long buildingId, Long floorId, OccupancyStatus status, Long residentId, Long ownerId) {
+        User actor = directoryAccess.currentActor();
+        if ("SECURITY".equals(actor.getRole())) {
+            if (buildingId != null) directoryAccess.requireReadAccess(actor, buildingId);
+            if (floorId != null) {
+                Floor floor = floorRepository.findById(floorId).orElseThrow(() -> new ResourceNotFoundException("Floor not found"));
+                directoryAccess.requireReadAccess(actor, floor.getBuilding().getId());
+            }
+            return apartmentRepository.findAll().stream()
+                .filter(a -> directoryAccess.canReadBuilding(actor, a.getBuilding()))
+                .filter(a -> buildingId == null || buildingId.equals(a.getBuilding().getId()))
+                .filter(a -> floorId == null || floorId.equals(a.getFloor().getId()))
+                .filter(a -> status == null || status == a.getOccupancyStatus())
+                .filter(a -> residentId == null || (a.getCurrentResident() != null && residentId.equals(a.getCurrentResident().getId())))
+                .filter(a -> ownerId == null || (a.getOwner() != null && ownerId.equals(a.getOwner().getId())))
+                .map(this::response).toList();
+        }
         List<Apartment> list;
         if (buildingId != null && status != null) {
             list = apartmentRepository.findByBuildingIdAndOccupancyStatus(buildingId, status);
@@ -123,7 +148,7 @@ public class ApartmentService {
         }
 
         return list.stream()
-                .map(apartmentMapper::toResponse)
+                .map(this::response)
                 .toList();
     }
 
@@ -131,6 +156,7 @@ public class ApartmentService {
     public ApartmentResponse updateApartment(Long id, ApartmentRequest request) {
         Apartment apt = apartmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with ID: " + id));
+        directoryAccess.requireManagementAccess(directoryAccess.currentActor(), apt.getBuilding().getId());
 
         apt.setSizeSqft(request.getSizeSqft());
         apt.setNetCarpetSqft(request.getNetCarpetSqft());
@@ -150,13 +176,14 @@ public class ApartmentService {
         apt.setOwnerPhone(request.getOwnerPhone());
         apt.setOwnerEmail(request.getOwnerEmail());
 
-        return apartmentMapper.toResponse(apartmentRepository.save(apt));
+        return response(apartmentRepository.save(apt));
     }
 
     @Transactional
     public ApartmentResponse updateOccupancyStatus(Long id, OccupancyUpdateRequest request) {
         Apartment apt = apartmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with ID: " + id));
+        directoryAccess.requireManagementAccess(directoryAccess.currentActor(), apt.getBuilding().getId());
 
         OccupancyStatus previousStatus = apt.getOccupancyStatus();
         OccupancyStatus newStatus = request.getNewStatus();
@@ -189,10 +216,15 @@ public class ApartmentService {
         LocalDate effDate = request.getEffectiveDate() != null ? request.getEffectiveDate() : LocalDate.now();
         recordHistory(updated, previousStatus.name(), newStatus.name(), previousResident, newResident, changedBy, request.getNotes(), effDate);
 
-        return apartmentMapper.toResponse(updated);
+        return response(updated);
     }
 
     public List<OccupancyHistoryResponse> getOccupancyHistory(Long apartmentId) {
+        User actor = directoryAccess.currentActor();
+        if ("SECURITY".equals(actor.getRole())) {
+            Apartment a = apartmentRepository.findById(apartmentId).orElseThrow(() -> new ResourceNotFoundException("Apartment not found"));
+            directoryAccess.requireReadAccess(actor, a.getBuilding().getId());
+        }
         if (!apartmentRepository.existsById(apartmentId)) {
             throw new ResourceNotFoundException("Apartment not found with ID: " + apartmentId);
         }
@@ -205,6 +237,7 @@ public class ApartmentService {
     public void deleteApartment(Long id) {
         Apartment apt = apartmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with ID: " + id));
+        directoryAccess.requireManagementAccess(directoryAccess.currentActor(), apt.getBuilding().getId());
 
         if (apt.getOccupancyStatus() != OccupancyStatus.VACANT) {
             throw new IllegalArgumentException("Cannot delete an occupied apartment. Please vacate the unit first.");

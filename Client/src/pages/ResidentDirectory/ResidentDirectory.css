@@ -1,0 +1,27 @@
+.directory { display:grid; gap:24px; max-width:1200px; margin:auto; color:var(--text-primary); }
+.directory h1 { font-size:28px; letter-spacing:-.03em; margin:8px 0; }
+.directory h2 { font-size:18px; margin:0 0 12px; }
+.directory h3 { font-size:16px; margin:0; }
+.directory p { color:var(--text-secondary); font-size:14px; line-height:1.6; margin:8px 0 14px; }
+.directory-eyebrow { color:var(--brand-primary); font-size:11px; letter-spacing:.12em; font-weight:700; }
+.directory-card { padding:24px; background:var(--bg-surface); border:1px solid var(--border-hairline); border-radius:12px; }
+.directory-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(245px,1fr)); gap:16px; }
+.directory-person { padding:20px; border:1px solid var(--border-hairline); border-radius:10px; }
+.directory-unit { font-variant-numeric:tabular-nums; }
+.directory button { padding:10px 14px; border-radius:6px; color:white; background:var(--brand-primary); font-weight:600; cursor:pointer; min-height:40px; }
+.directory button:disabled { opacity:.5; cursor:wait; }
+.directory input:not([type=checkbox]), .directory select { padding:10px; border:1px solid var(--border-hairline); border-radius:6px; background:var(--bg-surface); color:var(--text-primary); max-width:100%; }
+.directory-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:12px; }
+.directory-switches { display:flex; gap:20px; flex-wrap:wrap; margin:16px 0; }
+.directory label { display:flex; gap:8px; align-items:center; font-size:14px; }
+.directory a { color:var(--brand-primary); overflow-wrap:anywhere; }
+.directory dl { display:grid; grid-template-columns:1fr 2fr; gap:10px; margin:16px 0; font-size:14px; }
+.directory dd { margin:0; overflow-wrap:anywhere; }
+.directory dt { color:var(--text-muted); }
+.directory-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.directory-form p { grid-column:1/-1; }
+.directory-form label { align-items:stretch; flex-direction:column; }
+.directory [role=alert] { color:#b91c1c; }
+.directory li { margin:12px 0; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.directory :focus-visible { outline:2px solid var(--brand-primary); outline-offset:3px; }
+@media(max-width:640px){.directory-card{padding:16px}.directory-form{grid-template-columns:1fr}.directory h1{font-size:24px}.directory-grid{grid-template-columns:1fr}}
