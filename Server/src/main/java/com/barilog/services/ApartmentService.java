@@ -25,17 +25,70 @@ public class ApartmentService {
     private final BuildingRepository buildingRepository;
     private final FloorRepository floorRepository;
     private final UserRepository userRepository;
+    private final ResidentRepository residentRepository;
     private final OccupancyHistoryRepository occupancyHistoryRepository;
     private final ApartmentMapper apartmentMapper;
     private final OccupancyHistoryMapper occupancyHistoryMapper;
     private final AuthService authService;
     private final DirectoryAccessService directoryAccess;
     private final ContactVisibilityService contactVisibility;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     private ApartmentResponse response(Apartment apartment) {
+        if (apartment.getOccupancyStatus() == OccupancyStatus.OWNER_OCCUPIED && apartment.getCurrentResident() == null && apartment.getOwner() != null) {
+            apartment.setCurrentResident(apartment.getOwner());
+            apartment = apartmentRepository.save(apartment);
+        }
         User actor = directoryAccess.currentActor();
         if ("SECURITY".equals(actor.getRole())) directoryAccess.requireReadAccess(actor, apartment.getBuilding().getId());
         return contactVisibility.redactApartment(actor, apartment, apartmentMapper.toResponse(apartment));
+    }
+
+    private User resolveOrCreateOwner(ApartmentRequest request, String unitNumber, Long buildingId) {
+        if (request == null) return null;
+
+        if (request.getOwnerId() != null) {
+            return userRepository.findById(request.getOwnerId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Owner user not found with ID: " + request.getOwnerId()));
+        }
+
+        String email = request.getOwnerEmail() != null ? request.getOwnerEmail().trim() : null;
+        if (email != null && !email.isBlank()) {
+            java.util.Optional<User> byEmail = userRepository.findByEmail(email);
+            if (byEmail.isPresent()) {
+                return byEmail.get();
+            }
+        }
+
+        String phone = request.getOwnerPhone() != null ? request.getOwnerPhone().trim() : null;
+        if (phone != null && !phone.isBlank()) {
+            java.util.Optional<User> byPhone = userRepository.findByPhoneNumber(phone);
+            if (byPhone.isPresent()) {
+                return byPhone.get();
+            }
+        }
+
+        String name = request.getOwnerName() != null ? request.getOwnerName().trim() : null;
+        if (name != null && !name.isBlank()) {
+            Resident resident = new Resident();
+            resident.setName(name);
+            resident.setPhoneNumber(phone);
+            if (email != null && !email.isBlank()) {
+                resident.setEmail(email);
+            } else {
+                String cleanUnit = unitNumber != null ? unitNumber.toLowerCase().replaceAll("[^a-z0-9]", "") : "unit";
+                resident.setEmail("owner." + cleanUnit + "." + buildingId + "@barilog.local");
+            }
+            resident.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+            resident.setRole("RESIDENT");
+            resident.setResidentType("OWNER_RESIDENT");
+            resident.setIsActive(true);
+            resident.setSharePhone(true);
+            resident.setShareEmail(true);
+            return residentRepository.save(resident);
+        }
+
+        return null;
     }
 
     @Transactional
@@ -69,15 +122,18 @@ public class ApartmentService {
         apartment.setUtilityMeterNumber(request.getUtilityMeterNumber());
         apartment.setOccupancyStatus(request.getOccupancyStatus() != null ? request.getOccupancyStatus() : OccupancyStatus.VACANT);
 
-        // Ownership
-        if (request.getOwnerId() != null) {
-            User owner = userRepository.findById(request.getOwnerId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Owner user not found with ID: " + request.getOwnerId()));
+        // Ownership resolution
+        User owner = resolveOrCreateOwner(request, apartment.getUnitNumber(), building.getId());
+        if (owner != null) {
             apartment.setOwner(owner);
+            apartment.setOwnerName(owner.getName());
+            apartment.setOwnerPhone(owner.getPhoneNumber());
+            apartment.setOwnerEmail(owner.getEmail());
+        } else {
+            apartment.setOwnerName(request.getOwnerName());
+            apartment.setOwnerPhone(request.getOwnerPhone());
+            apartment.setOwnerEmail(request.getOwnerEmail());
         }
-        apartment.setOwnerName(request.getOwnerName());
-        apartment.setOwnerPhone(request.getOwnerPhone());
-        apartment.setOwnerEmail(request.getOwnerEmail());
 
         // Occupancy resident handling
         if (apartment.getOccupancyStatus() == OccupancyStatus.OWNER_OCCUPIED) {
@@ -167,14 +223,27 @@ public class ApartmentService {
         apt.setParkingSlotNumber(request.getParkingSlotNumber());
         apt.setUtilityMeterNumber(request.getUtilityMeterNumber());
 
-        if (request.getOwnerId() != null) {
-            User owner = userRepository.findById(request.getOwnerId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Owner not found with ID: " + request.getOwnerId()));
+        User owner = resolveOrCreateOwner(request, apt.getUnitNumber(), apt.getBuilding().getId());
+        if (owner != null) {
             apt.setOwner(owner);
+            apt.setOwnerName(owner.getName());
+            apt.setOwnerPhone(owner.getPhoneNumber());
+            apt.setOwnerEmail(owner.getEmail());
+        } else {
+            if (request.getOwnerName() != null) apt.setOwnerName(request.getOwnerName());
+            if (request.getOwnerPhone() != null) apt.setOwnerPhone(request.getOwnerPhone());
+            if (request.getOwnerEmail() != null) apt.setOwnerEmail(request.getOwnerEmail());
         }
-        apt.setOwnerName(request.getOwnerName());
-        apt.setOwnerPhone(request.getOwnerPhone());
-        apt.setOwnerEmail(request.getOwnerEmail());
+
+        if (apt.getOccupancyStatus() == OccupancyStatus.OWNER_OCCUPIED) {
+            if (request.getCurrentResidentId() != null) {
+                User resident = userRepository.findById(request.getCurrentResidentId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Resident not found with ID: " + request.getCurrentResidentId()));
+                apt.setCurrentResident(resident);
+            } else if (apt.getOwner() != null) {
+                apt.setCurrentResident(apt.getOwner());
+            }
+        }
 
         return response(apartmentRepository.save(apt));
     }
@@ -198,6 +267,19 @@ public class ApartmentService {
                         .orElseThrow(() -> new ResourceNotFoundException("Resident not found with ID: " + request.getNewResidentId()));
             } else if (apt.getOwner() != null) {
                 newResident = apt.getOwner();
+            } else {
+                ApartmentRequest fallback = new ApartmentRequest();
+                fallback.setOwnerId(request.getOwnerId());
+                fallback.setOwnerName(request.getOwnerName() != null ? request.getOwnerName() : apt.getOwnerName());
+                fallback.setOwnerPhone(request.getOwnerPhone() != null ? request.getOwnerPhone() : apt.getOwnerPhone());
+                fallback.setOwnerEmail(request.getOwnerEmail() != null ? request.getOwnerEmail() : apt.getOwnerEmail());
+                newResident = resolveOrCreateOwner(fallback, apt.getUnitNumber(), apt.getBuilding().getId());
+                if (newResident != null) {
+                    apt.setOwner(newResident);
+                    apt.setOwnerName(newResident.getName());
+                    apt.setOwnerPhone(newResident.getPhoneNumber());
+                    apt.setOwnerEmail(newResident.getEmail());
+                }
             }
             apt.setCurrentResident(newResident);
         } else if (newStatus == OccupancyStatus.RENTED) {

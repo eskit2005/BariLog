@@ -19,7 +19,7 @@ public class DirectoryAccessService {
  }
  public boolean eligible(Apartment a) {
   return Boolean.TRUE.equals(a.getIsActive()) && a.getOccupancyStatus()!=OccupancyStatus.VACANT
-   && org.hibernate.Hibernate.unproxy(a.getCurrentResident()) instanceof Resident && Boolean.TRUE.equals(a.getCurrentResident().getIsActive());
+   && a.getCurrentResident() != null && Boolean.TRUE.equals(a.getCurrentResident().getIsActive());
  }
  public boolean canManageBuilding(User actor, Building b) {
   return Boolean.TRUE.equals(actor.getIsActive()) && ("ADMIN".equals(actor.getRole()) ||
@@ -46,7 +46,9 @@ public class DirectoryAccessService {
  public Resident requireCurrentResident(User actor, Long buildingId, Long residentId) {
   requireReadAccess(actor,buildingId);
   return apartments.findByBuildingId(buildingId).stream().filter(this::eligible)
-   .map(a->(Resident)org.hibernate.Hibernate.unproxy(a.getCurrentResident())).filter(r->Objects.equals(r.getId(),residentId)).findFirst()
+   .map(a->org.hibernate.Hibernate.unproxy(a.getCurrentResident()))
+   .filter(u->u instanceof Resident && Objects.equals(((Resident)u).getId(),residentId))
+   .map(u->(Resident)u).findFirst()
    .orElseThrow(()->new ResourceNotFoundException("Current resident not found"));
  }
  public List<Building> accessibleBuildings(User actor) {

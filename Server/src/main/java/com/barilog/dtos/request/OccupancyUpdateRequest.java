@@ -14,6 +14,11 @@ public class OccupancyUpdateRequest {
 
     private Long newResidentId;
 
+    private Long ownerId;
+    private String ownerName;
+    private String ownerPhone;
+    private String ownerEmail;
+
     private String notes;
 
     private LocalDate effectiveDate;

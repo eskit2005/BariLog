@@ -2,6 +2,7 @@ package com.barilog.mappers;
 
 import com.barilog.dtos.response.ApartmentResponse;
 import com.barilog.entities.Apartment;
+import com.barilog.entities.OccupancyStatus;
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -25,9 +26,24 @@ public interface ApartmentMapper {
     @AfterMapping
     default void populateOwnerFallback(Apartment apartment, @MappingTarget ApartmentResponse response) {
         if (apartment.getOwner() != null) {
-            response.setOwnerName(apartment.getOwner().getName());
-            response.setOwnerEmail(apartment.getOwner().getEmail());
-            response.setOwnerPhone(apartment.getOwner().getPhoneNumber());
+            if (response.getOwnerName() == null) response.setOwnerName(apartment.getOwner().getName());
+            if (response.getOwnerEmail() == null) response.setOwnerEmail(apartment.getOwner().getEmail());
+            if (response.getOwnerPhone() == null) response.setOwnerPhone(apartment.getOwner().getPhoneNumber());
+            if (response.getOwnerId() == null) response.setOwnerId(apartment.getOwner().getId());
+        }
+        if (apartment.getOccupancyStatus() == OccupancyStatus.OWNER_OCCUPIED) {
+            if (response.getCurrentResidentId() == null && response.getOwnerId() != null) {
+                response.setCurrentResidentId(response.getOwnerId());
+            }
+            if (response.getCurrentResidentName() == null) {
+                response.setCurrentResidentName(response.getOwnerName());
+            }
+            if (response.getCurrentResidentPhone() == null) {
+                response.setCurrentResidentPhone(response.getOwnerPhone());
+            }
+            if (response.getCurrentResidentEmail() == null) {
+                response.setCurrentResidentEmail(response.getOwnerEmail());
+            }
         }
     }
 }

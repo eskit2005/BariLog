@@ -32,12 +32,14 @@ public class ResidentDirectoryService {
   Map<Long,DirectoryResidentResponse> rows=new LinkedHashMap<>();
   for(Apartment apt:apartments.findByBuildingId(buildingId)) {
    if(!access.eligible(apt)) continue;
-   Resident r=(Resident)org.hibernate.Hibernate.unproxy(apt.getCurrentResident());
-   DirectoryResidentResponse row=rows.computeIfAbsent(r.getId(),id->{
-    DirectoryResidentResponse d=new DirectoryResidentResponse();d.setResidentId(id);d.setName(r.getName());d.setUnits(new ArrayList<>());
-    boolean phone=visibility.maySeePhone(actor,b,r),email=visibility.maySeeEmail(actor,b,r);
-    d.setPhoneNumber(phone?r.getPhoneNumber():null);d.setEmail(email?r.getEmail():null);
-    d.setPhoneVisibility(state(phone,r.getPhoneNumber()));d.setEmailVisibility(state(email,r.getEmail()));return d;
+   User occupant=(User)org.hibernate.Hibernate.unproxy(apt.getCurrentResident());
+   Resident r = occupant instanceof Resident ? (Resident) occupant : null;
+   DirectoryResidentResponse row=rows.computeIfAbsent(occupant.getId(),id->{
+    DirectoryResidentResponse d=new DirectoryResidentResponse();d.setResidentId(id);d.setName(occupant.getName());d.setUnits(new ArrayList<>());
+    boolean phone=r!=null ? visibility.maySeePhone(actor,b,r) : true;
+    boolean email=r!=null ? visibility.maySeeEmail(actor,b,r) : true;
+    d.setPhoneNumber(phone?occupant.getPhoneNumber():null);d.setEmail(email?occupant.getEmail():null);
+    d.setPhoneVisibility(state(phone,occupant.getPhoneNumber()));d.setEmailVisibility(state(email,occupant.getEmail()));return d;
    });
    DirectoryUnitResponse unit=new DirectoryUnitResponse();unit.setApartmentId(apt.getId());unit.setUnitNumber(apt.getUnitNumber());unit.setFloorNumber(apt.getFloor().getFloorNumber());unit.setBlockWing(apt.getFloor().getBlockWing());row.getUnits().add(unit);
   }

@@ -497,6 +497,10 @@ export const ApartmentRegistry = () => {
           handleOpenOccupancyModal(apt);
         }}
         onApartmentDeleted={loadData}
+        onApartmentUpdated={(updated) => {
+          setSelectedApartment(updated);
+          loadData();
+        }}
       />
 
       {/* Modal: Create Building */}

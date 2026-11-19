@@ -43,6 +43,10 @@ class ApartmentServiceTest {
     @Mock
     private UserRepository userRepository;
     @Mock
+    private ResidentRepository residentRepository;
+    @Mock
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    @Mock
     private OccupancyHistoryRepository occupancyHistoryRepository;
     @Mock
     private AuthService authService;
@@ -68,10 +72,11 @@ class ApartmentServiceTest {
                 buildingRepository,
                 floorRepository,
                 userRepository,
+                residentRepository,
                 occupancyHistoryRepository,
                 apartmentMapper,
                 occupancyHistoryMapper,
-                authService, directoryAccess, contactVisibility
+                authService, directoryAccess, contactVisibility, passwordEncoder
         );
 
         buildingService = new BuildingService(
@@ -206,5 +211,86 @@ class ApartmentServiceTest {
         assertEquals(15L, stats.getRentedUnits());
         // 40 occupied out of 50 = 80.0%
         assertEquals(80.0, stats.getOccupancyRatePercentage());
+    }
+
+    @Test
+    void testCreateApartment_WithOwnerAndOwnerOccupied() {
+        when(authService.getLoggedUser()).thenReturn(manager);
+        when(buildingRepository.findById(10L)).thenReturn(Optional.of(building));
+        when(floorRepository.findById(100L)).thenReturn(Optional.of(floor));
+        when(apartmentRepository.existsByBuildingIdAndUnitNumber(10L, "5B")).thenReturn(false);
+
+        Resident existingOwner = new Resident();
+        existingOwner.setId(300L);
+        existingOwner.setName("Karim Owner");
+        existingOwner.setEmail("karim@owner.com");
+        existingOwner.setPhoneNumber("+8801711223344");
+        existingOwner.setRole("RESIDENT");
+        when(userRepository.findByEmail("karim@owner.com")).thenReturn(Optional.of(existingOwner));
+
+        when(apartmentRepository.save(any(Apartment.class))).thenAnswer(inv -> {
+            Apartment saved = inv.getArgument(0);
+            saved.setId(505L);
+            return saved;
+        });
+
+        ApartmentRequest req = new ApartmentRequest();
+        req.setBuildingId(10L);
+        req.setFloorId(100L);
+        req.setUnitNumber("5B");
+        req.setSizeSqft(new BigDecimal("1600.00"));
+        req.setBhkType("3 BHK");
+        req.setOccupancyStatus(OccupancyStatus.OWNER_OCCUPIED);
+        req.setOwnerName("Karim Owner");
+        req.setOwnerEmail("karim@owner.com");
+        req.setOwnerPhone("+8801711223344");
+
+        ApartmentResponse res = apartmentService.createApartment(req);
+
+        assertNotNull(res);
+        assertEquals("5B", res.getUnitNumber());
+        assertEquals(OccupancyStatus.OWNER_OCCUPIED, res.getOccupancyStatus());
+        assertEquals(300L, res.getOwnerId());
+        assertEquals("Karim Owner", res.getOwnerName());
+        assertEquals(300L, res.getCurrentResidentId());
+        assertEquals("Karim Owner", res.getCurrentResidentName());
+        assertEquals("+8801711223344", res.getCurrentResidentPhone());
+    }
+
+    @Test
+    void testUpdateOccupancy_OwnerOccupiedSetsOwnerAsResident() {
+        when(authService.getLoggedUser()).thenReturn(manager);
+
+        Resident owner = new Resident();
+        owner.setId(301L);
+        owner.setName("Rahim Owner");
+        owner.setEmail("rahim@owner.com");
+        owner.setPhoneNumber("+8801811223344");
+
+        Apartment existing = new Apartment();
+        existing.setId(506L);
+        existing.setBuilding(building);
+        existing.setFloor(floor);
+        existing.setUnitNumber("6C");
+        existing.setOccupancyStatus(OccupancyStatus.VACANT);
+        existing.setOwner(owner);
+        existing.setOwnerName("Rahim Owner");
+        existing.setOwnerEmail("rahim@owner.com");
+        existing.setOwnerPhone("+8801811223344");
+
+        when(apartmentRepository.findById(506L)).thenReturn(Optional.of(existing));
+        when(apartmentRepository.save(any(Apartment.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OccupancyUpdateRequest updateReq = new OccupancyUpdateRequest();
+        updateReq.setNewStatus(OccupancyStatus.OWNER_OCCUPIED);
+        updateReq.setNotes("Owner moved into their flat");
+        updateReq.setEffectiveDate(LocalDate.now());
+
+        ApartmentResponse updated = apartmentService.updateOccupancyStatus(506L, updateReq);
+
+        assertEquals(OccupancyStatus.OWNER_OCCUPIED, updated.getOccupancyStatus());
+        assertEquals(301L, updated.getCurrentResidentId());
+        assertEquals("Rahim Owner", updated.getCurrentResidentName());
+        assertEquals(301L, updated.getOwnerId());
     }
 }

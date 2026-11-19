@@ -33,12 +33,26 @@ public class UserService {
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        if (userRepository.countByEmail(request.getEmail()) > 0) {
+        String role = request.getRole().toUpperCase();
+        String encodedPassword = passwordEncoder.encode(request.getPassword());
+
+        java.util.Optional<User> existingUserOpt = userRepository.findByEmail(request.getEmail());
+        if (existingUserOpt.isPresent()) {
+            User existing = existingUserOpt.get();
+            if ("RESIDENT".equalsIgnoreCase(existing.getRole()) && "RESIDENT".equalsIgnoreCase(role)) {
+                existing.setName(request.getName());
+                existing.setPassword(encodedPassword);
+                if (request.getPhoneNumber() != null && !request.getPhoneNumber().isBlank()) {
+                    existing.setPhoneNumber(request.getPhoneNumber());
+                }
+                existing.setIsActive(true);
+                User saved = userRepository.save(existing);
+                applicationEventPublisher.publishEvent(new UserRegisteredEvent(saved.getName(), saved.getEmail(), role));
+                return userMapper.toResponse(saved);
+            }
             throw new DuplicateResourceException("Email already in use: " + request.getEmail());
         }
 
-        String role = request.getRole().toUpperCase();
-        String encodedPassword = passwordEncoder.encode(request.getPassword());
         User saved;
 
         switch (role) {

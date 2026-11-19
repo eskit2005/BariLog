@@ -15,6 +15,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { getOccupancyHistory, deleteApartment } from '../../services/api';
+import EditApartmentModal from '../modals/EditApartmentModal';
 
 export const UnitSlideOver = ({ 
   isOpen, 
@@ -22,6 +23,7 @@ export const UnitSlideOver = ({
   apartment, 
   onOpenUpdateOccupancy, 
   onApartmentDeleted,
+  onApartmentUpdated,
   isManager = false,
   currentUserId = null
 }) => {
@@ -29,6 +31,7 @@ export const UnitSlideOver = ({
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const isMyUnit = Boolean(
     currentUserId && 
@@ -113,18 +116,27 @@ export const UnitSlideOver = ({
           {isManager ? (
             <div style={styles.actionCard}>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 600 }}>Manage Unit Occupancy</div>
+                <div style={{ fontSize: '13px', fontWeight: 600 }}>Manage Unit & Occupancy</div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  Move in a tenant, register owner, or vacate unit.
+                  Update ownership, edit flat specs, or change occupancy status.
                 </div>
               </div>
-              <button
-                onClick={() => onOpenUpdateOccupancy(apartment)}
-                style={styles.actionBtn}
-              >
-                <Edit3 size={14} />
-                <span>Change Status</span>
-              </button>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  style={{ ...styles.actionBtn, backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-hairline)', color: 'var(--text-primary)' }}
+                >
+                  <Edit3 size={14} />
+                  <span>Edit Details</span>
+                </button>
+                <button
+                  onClick={() => onOpenUpdateOccupancy(apartment)}
+                  style={styles.actionBtn}
+                >
+                  <Edit3 size={14} />
+                  <span>Change Status</span>
+                </button>
+              </div>
             </div>
           ) : (
             <div style={styles.residentBanner}>
@@ -184,7 +196,7 @@ export const UnitSlideOver = ({
               <div style={styles.infoRow}>
                 <User size={15} color="var(--brand-primary)" />
                 <span style={styles.infoBold}>{apartment.ownerName || 'Unregistered Owner'}</span>
-                {apartment.ownerId && <span style={styles.verifiedTag}>Linked Account</span>}
+                {apartment.ownerId && <span style={styles.verifiedTag}>Linked Account #{apartment.ownerId}</span>}
               </div>
               {apartment.ownerPhone && (
                 <div style={styles.infoRow}>
@@ -203,31 +215,55 @@ export const UnitSlideOver = ({
 
           {/* Section: Active Resident / Occupant */}
           <div style={styles.section}>
-            <div style={styles.sectionTitle}>Active Occupant</div>
-            {apartment.currentResidentName ? (
-              <div style={styles.infoCard}>
-                <div style={styles.infoRow}>
-                  <User size={15} color="var(--status-rented-text)" />
-                  <span style={styles.infoBold}>{apartment.currentResidentName}</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={styles.sectionTitle}>Active Occupant</span>
+              {apartment.occupancyStatus === 'OWNER_OCCUPIED' && (
+                <span style={{ ...styles.verifiedTag, backgroundColor: 'var(--status-occupied-bg)', color: 'var(--status-occupied-text)', borderColor: 'var(--status-occupied-border)' }}>
+                  Owner-Occupant (Living in Unit)
+                </span>
+              )}
+              {apartment.occupancyStatus === 'RENTED' && (
+                <span style={{ ...styles.verifiedTag, backgroundColor: 'var(--status-rented-bg)', color: 'var(--status-rented-text)', borderColor: 'var(--status-rented-border)' }}>
+                  Tenant
+                </span>
+              )}
+            </div>
+            {(() => {
+              const isOwnerOccupied = apartment.occupancyStatus === 'OWNER_OCCUPIED';
+              const occupantName = apartment.currentResidentName || (isOwnerOccupied ? apartment.ownerName : null);
+              const occupantPhone = apartment.currentResidentPhone || (isOwnerOccupied ? apartment.ownerPhone : null);
+              const occupantEmail = apartment.currentResidentEmail || (isOwnerOccupied ? apartment.ownerEmail : null);
+              const occupantId = apartment.currentResidentId || (isOwnerOccupied ? apartment.ownerId : null);
+
+              if (occupantName) {
+                return (
+                  <div style={styles.infoCard}>
+                    <div style={styles.infoRow}>
+                      <User size={15} color={isOwnerOccupied ? 'var(--brand-primary)' : 'var(--status-rented-text)'} />
+                      <span style={styles.infoBold}>{occupantName}</span>
+                      {occupantId && <span style={styles.verifiedTag}>User #{occupantId}</span>}
+                    </div>
+                    {occupantPhone && (
+                      <div style={styles.infoRow}>
+                        <Phone size={14} color="var(--text-muted)" />
+                        <span>{occupantPhone}</span>
+                      </div>
+                    )}
+                    {occupantEmail && (
+                      <div style={styles.infoRow}>
+                        <Mail size={14} color="var(--text-muted)" />
+                        <span>{occupantEmail}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <div style={styles.emptyNotice}>
+                  No active occupant residing in this flat. (Unit is {apartment.occupancyStatus}).
                 </div>
-                {apartment.currentResidentPhone && (
-                  <div style={styles.infoRow}>
-                    <Phone size={14} color="var(--text-muted)" />
-                    <span>{apartment.currentResidentPhone}</span>
-                  </div>
-                )}
-                {apartment.currentResidentEmail && (
-                  <div style={styles.infoRow}>
-                    <Mail size={14} color="var(--text-muted)" />
-                    <span>{apartment.currentResidentEmail}</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div style={styles.emptyNotice}>
-                No active occupant residing in this flat. (Unit is {apartment.occupancyStatus}).
-              </div>
-            )}
+              );
+            })()}
           </div>
 
           {/* Section: Occupancy Audit History (Pattern F from DESIGN.md) */}
@@ -291,6 +327,15 @@ export const UnitSlideOver = ({
           )}
         </div>
       </div>
+
+      <EditApartmentModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        apartment={apartment}
+        onApartmentUpdated={(updated) => {
+          if (onApartmentUpdated) onApartmentUpdated(updated);
+        }}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Home } from 'lucide-react';
-import { createApartment } from '../../services/api';
+import { X, Home, UserCheck, ShieldCheck } from 'lucide-react';
+import { createApartment, getUsers } from '../../services/api';
 import { modalStyles } from './CreateBuildingModal';
 
 export const CreateApartmentModal = ({ isOpen, onClose, buildingId, floors = [], onApartmentCreated }) => {
@@ -16,10 +16,15 @@ export const CreateApartmentModal = ({ isOpen, onClose, buildingId, floors = [],
     parkingSlotNumber: '',
     utilityMeterNumber: '',
     occupancyStatus: 'VACANT',
+    ownerId: null,
     ownerName: '',
     ownerPhone: '',
     ownerEmail: '',
+    currentResidentId: null,
   });
+  const [users, setUsers] = useState([]);
+  const [selectedOwnerUserId, setSelectedOwnerUserId] = useState('');
+  const [selectedTenantUserId, setSelectedTenantUserId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -29,7 +34,44 @@ export const CreateApartmentModal = ({ isOpen, onClose, buildingId, floors = [],
     }
   }, [floors]);
 
+  useEffect(() => {
+    if (isOpen) {
+      getUsers()
+        .then((data) => setUsers(Array.isArray(data) ? data : []))
+        .catch((err) => console.warn('Could not load users list', err));
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const handleOwnerUserSelect = (userIdStr) => {
+    setSelectedOwnerUserId(userIdStr);
+    if (!userIdStr) {
+      setFormData((prev) => ({
+        ...prev,
+        ownerId: null,
+      }));
+      return;
+    }
+    const matched = users.find((u) => String(u.id) === String(userIdStr));
+    if (matched) {
+      setFormData((prev) => ({
+        ...prev,
+        ownerId: matched.id,
+        ownerName: matched.name || prev.ownerName,
+        ownerEmail: matched.email || prev.ownerEmail,
+        ownerPhone: matched.phoneNumber || prev.ownerPhone,
+      }));
+    }
+  };
+
+  const handleTenantUserSelect = (userIdStr) => {
+    setSelectedTenantUserId(userIdStr);
+    setFormData((prev) => ({
+      ...prev,
+      currentResidentId: userIdStr ? Number(userIdStr) : null,
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -52,6 +94,8 @@ export const CreateApartmentModal = ({ isOpen, onClose, buildingId, floors = [],
         floorId: Number(resolvedFloorId),
         sizeSqft: Number(formData.sizeSqft),
         netCarpetSqft: formData.netCarpetSqft ? Number(formData.netCarpetSqft) : null,
+        ownerId: formData.ownerId ? Number(formData.ownerId) : null,
+        currentResidentId: formData.currentResidentId ? Number(formData.currentResidentId) : null,
       };
       const created = await createApartment(payload);
       onApartmentCreated(created);
@@ -65,7 +109,7 @@ export const CreateApartmentModal = ({ isOpen, onClose, buildingId, floors = [],
 
   return (
     <div style={modalStyles.overlay}>
-      <div style={{ ...modalStyles.card, maxWidth: '640px' }}>
+      <div style={{ ...modalStyles.card, maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={modalStyles.header}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Home size={20} color="var(--brand-primary)" />
@@ -169,11 +213,90 @@ export const CreateApartmentModal = ({ isOpen, onClose, buildingId, floors = [],
             </div>
           </div>
 
+          {/* Row 4: Initial Occupancy Status */}
+          <div style={{ marginTop: '4px', paddingTop: '10px', borderTop: '1px solid var(--border-hairline)' }}>
+            <div style={modalStyles.formGroup}>
+              <label style={modalStyles.label}>Initial Occupancy Status</label>
+              <select
+                value={formData.occupancyStatus}
+                onChange={(e) => setFormData({ ...formData, occupancyStatus: e.target.value })}
+                style={modalStyles.input}
+              >
+                <option value="VACANT">VACANT (Empty Unit)</option>
+                <option value="OWNER_OCCUPIED">OWNER_OCCUPIED (Owner Lives in Apartment)</option>
+                <option value="RENTED">RENTED (Occupied by Tenant)</option>
+              </select>
+            </div>
+
+            {formData.occupancyStatus === 'OWNER_OCCUPIED' && (
+              <div style={noticeBoxStyle}>
+                <ShieldCheck size={16} color="var(--brand-primary)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div>
+                  <strong>Owner-Occupied:</strong> The owner will be directly associated with this apartment and recorded as the active resident residing inside the unit and appearing in the building Resident Directory.
+                </div>
+              </div>
+            )}
+
+            {formData.occupancyStatus === 'RENTED' && (
+              <div style={{ ...modalStyles.formGroup, marginTop: '8px' }}>
+                <label style={modalStyles.label}>Select Tenant (Registered User)</label>
+                <select
+                  value={selectedTenantUserId}
+                  onChange={(e) => handleTenantUserSelect(e.target.value)}
+                  style={modalStyles.input}
+                >
+                  <option value="">-- Choose Tenant User (or enter ID below) --</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      #{u.id} {u.name} ({u.role || 'USER'}) {u.email ? `· ${u.email}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Or manual Tenant User ID:</span>
+                  <input
+                    type="number"
+                    placeholder="e.g. 5"
+                    style={{ ...modalStyles.input, width: '120px', padding: '4px 8px' }}
+                    value={formData.currentResidentId || ''}
+                    onChange={(e) => setFormData({ ...formData, currentResidentId: e.target.value ? Number(e.target.value) : null })}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Section: Owner Information */}
           <div style={{ marginTop: '6px', paddingTop: '12px', borderTop: '1px solid var(--border-hairline)' }}>
-            <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px', color: 'var(--text-primary)' }}>
-              Unit Ownership Details
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                Unit Ownership Details
+              </span>
+              {formData.ownerId && (
+                <span style={{ fontSize: '11.5px', color: 'var(--status-occupied-text)', backgroundColor: 'var(--status-occupied-bg)', padding: '2px 8px', borderRadius: '12px', fontWeight: 500 }}>
+                  Linked Account #{formData.ownerId}
+                </span>
+              )}
             </div>
+
+            {users.length > 0 && (
+              <div style={{ ...modalStyles.formGroup, marginBottom: '12px' }}>
+                <label style={modalStyles.label}>Link Registered Account (Optional)</label>
+                <select
+                  value={selectedOwnerUserId}
+                  onChange={(e) => handleOwnerUserSelect(e.target.value)}
+                  style={modalStyles.input}
+                >
+                  <option value="">-- Enter owner manually or pick registered user --</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      #{u.id} {u.name} ({u.role || 'USER'}) {u.email ? `· ${u.email}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div style={gridRow}>
               <div style={modalStyles.formGroup}>
                 <label style={modalStyles.label}>Owner Full Name</label>
@@ -195,6 +318,17 @@ export const CreateApartmentModal = ({ isOpen, onClose, buildingId, floors = [],
                   style={modalStyles.input}
                 />
               </div>
+            </div>
+
+            <div style={{ ...modalStyles.formGroup, marginTop: '8px' }}>
+              <label style={modalStyles.label}>Owner Email Address</label>
+              <input
+                type="email"
+                placeholder="e.g. rafiqul@example.com"
+                value={formData.ownerEmail}
+                onChange={(e) => setFormData({ ...formData, ownerEmail: e.target.value })}
+                style={modalStyles.input}
+              />
             </div>
           </div>
 
@@ -218,6 +352,20 @@ const gridRow = {
   display: 'grid',
   gridTemplateColumns: '1fr 1fr',
   gap: '16px',
+};
+
+const noticeBoxStyle = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: '8px',
+  padding: '10px 12px',
+  backgroundColor: 'var(--status-occupied-bg)',
+  border: '1px solid var(--status-occupied-border)',
+  borderRadius: '6px',
+  fontSize: '12px',
+  color: 'var(--text-secondary)',
+  marginTop: '8px',
+  lineHeight: 1.45,
 };
 
 export default CreateApartmentModal;

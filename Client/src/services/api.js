@@ -90,6 +90,8 @@ export const register = (payload) =>
     body: JSON.stringify(payload),
   });
 
+export const getUsers = () => apiFetch('/users');
+
 export const fetchMe = () => apiFetch('/auth/me');
 
 export const logout = async () => {
