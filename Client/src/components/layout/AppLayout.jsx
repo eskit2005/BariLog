@@ -1,18 +1,21 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { AuthContext } from '../../context/AuthContext';
-import { getBuildings } from '../../services/api';
+import { getBuildings, getDirectoryBuildings } from '../../services/api';
 
 export const AppLayout = () => {
+  const location = useLocation();
+  const isDirectory = location.pathname === '/directory';
   const { user, logoutUser } = useContext(AuthContext);
   const [buildings, setBuildings] = useState([]);
   const [selectedBuildingId, setSelectedBuildingId] = useState(null);
 
-  const refreshBuildings = useCallback(async (preferredId = null) => {
+  const refreshBuildings = useCallback(async (preferredId = null, signal = undefined) => {
     try {
-      const list = await getBuildings();
+      const list = await (isDirectory ? getDirectoryBuildings({signal}) : getBuildings());
+      if (signal?.aborted) return;
       setBuildings(list);
       if (preferredId) {
         setSelectedBuildingId(preferredId);
@@ -27,10 +30,14 @@ export const AppLayout = () => {
     } catch (err) {
       console.error('Failed to load buildings', err);
     }
-  }, []);
+  }, [isDirectory, user?.id]);
 
   useEffect(() => {
-    refreshBuildings();
+    const controller = new AbortController();
+    setBuildings([]);
+    setSelectedBuildingId(null);
+    refreshBuildings(null, controller.signal);
+    return () => controller.abort();
   }, [refreshBuildings]);
 
   return (

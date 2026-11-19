@@ -1,35 +1,35 @@
 -- =============================================================================
--- Migration V3: Feature 03 - Digital Document Repository Schema (PostgreSQL)
+-- Migration V3: Feature 03 - Digital Document Repository Schema (SQLite)
 -- Building rules, notices, complaints and maintenance agreements
 -- =============================================================================
 
 -- 1. Building rules and bylaws (managers write, everyone reads)
 CREATE TABLE IF NOT EXISTS building_rules (
-    id BIGSERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     title VARCHAR(200) NOT NULL,
     description TEXT NOT NULL,
     category VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
     created_by_user_id BIGINT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_rule_creator FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- 2. Approved notices (managers publish, everyone reads, optional expiry)
 CREATE TABLE IF NOT EXISTS notices (
-    id BIGSERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     title VARCHAR(200) NOT NULL,
     content TEXT NOT NULL,
     category VARCHAR(30) NOT NULL DEFAULT 'GENERAL',
     expiry_date DATE,
     created_by_user_id BIGINT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_notice_category CHECK (category IN ('GENERAL', 'URGENT', 'MAINTENANCE', 'EVENT')),
     CONSTRAINT fk_notice_creator FOREIGN KEY (created_by_user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- 3. Complaints (residents file, managers resolve)
 CREATE TABLE IF NOT EXISTS complaints (
-    id BIGSERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     title VARCHAR(200) NOT NULL,
     description TEXT NOT NULL,
     category VARCHAR(50) NOT NULL DEFAULT 'GENERAL',
@@ -37,8 +37,8 @@ CREATE TABLE IF NOT EXISTS complaints (
     resident_id BIGINT NOT NULL,
     resolution_note TEXT,
     resolved_by_user_id BIGINT,
-    resolved_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_complaint_status CHECK (status IN ('OPEN', 'RESOLVED')),
     CONSTRAINT fk_complaint_resident FOREIGN KEY (resident_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_complaint_resolver FOREIGN KEY (resolved_by_user_id) REFERENCES users(id) ON DELETE SET NULL
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS complaints (
 
 -- 4. Maintenance agreements (residents submit, managers mark as noted, expiry tracked)
 CREATE TABLE IF NOT EXISTS maintenance_agreements (
-    id BIGSERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     title VARCHAR(200) NOT NULL,
     vendor_name VARCHAR(150) NOT NULL,
     service_type VARCHAR(100) NOT NULL,
@@ -56,8 +56,8 @@ CREATE TABLE IF NOT EXISTS maintenance_agreements (
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     submitted_by_user_id BIGINT NOT NULL,
     noted_by_user_id BIGINT,
-    noted_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    noted_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_agreement_status CHECK (status IN ('PENDING', 'NOTED')),
     CONSTRAINT chk_agreement_dates CHECK (expiry_date >= start_date),
     CONSTRAINT fk_agreement_submitter FOREIGN KEY (submitted_by_user_id) REFERENCES users(id) ON DELETE CASCADE,

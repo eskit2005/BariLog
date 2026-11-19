@@ -64,25 +64,31 @@
 			<artifactId>spring-boot-starter-validation</artifactId>
 		</dependency>
 
-		<!-- JPA + PostgreSQL -->
+		<!-- JPA -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
+
+		<!-- SQLite driver -->
 		<dependency>
-			<groupId>org.postgresql</groupId>
-			<artifactId>postgresql</artifactId>
+			<groupId>org.xerial</groupId>
+			<artifactId>sqlite-jdbc</artifactId>
+			<version>3.54.1.0</version>
 			<scope>runtime</scope>
 		</dependency>
 
-		<!-- Flyway -->
+		<!-- SQLiteDialect: not shipped in hibernate-core, not managed by Spring Boot's BOM -->
+		<dependency>
+			<groupId>org.hibernate.orm</groupId>
+			<artifactId>hibernate-community-dialects</artifactId>
+			<version>${hibernate.version}</version>
+		</dependency>
+
+		<!-- Flyway (SQLite support ships inside flyway-core) -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-flyway</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.flywaydb</groupId>
-			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 
 		<!-- Lombok -->
@@ -146,17 +152,6 @@
 							<version>${mapstruct.processor.version}</version>
 						</path>
 					</annotationProcessorPaths>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.flywaydb</groupId>
-				<artifactId>flyway-maven-plugin</artifactId>
-				<version>11.17.0</version>
-				<configuration>
-					<url>${env.DB_URL:jdbc:postgresql://localhost:5432/bariLog}</url>
-					<user>${env.DB_USERNAME:postgres}</user>
-					<password>${env.DB_PASSWORD:}</password>
-					<cleanDisabled>false</cleanDisabled>
 				</configuration>
 			</plugin>
 			<plugin>

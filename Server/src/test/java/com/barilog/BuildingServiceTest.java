@@ -21,6 +21,8 @@ import com.barilog.repositories.BuildingRepository;
 import com.barilog.repositories.FloorRepository;
 import com.barilog.repositories.UserRepository;
 import com.barilog.services.BuildingService;
+import com.barilog.services.DirectoryAccessService;
+import com.barilog.services.ContactVisibilityService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,6 +52,8 @@ class BuildingServiceTest {
     private final FloorMapper floorMapper = new FloorMapperImpl();
 
     private BuildingService buildingService;
+    private DirectoryAccessService directoryAccess = mock(DirectoryAccessService.class);
+    private ContactVisibilityService contactVisibility = mock(ContactVisibilityService.class);
 
     private User manager;
     private Building building;
@@ -62,7 +66,7 @@ class BuildingServiceTest {
                 apartmentRepository,
                 userRepository,
                 buildingMapper,
-                floorMapper
+                floorMapper, directoryAccess
         );
 
         manager = new Manager();
@@ -70,6 +74,9 @@ class BuildingServiceTest {
         manager.setName("Manager Alice");
         manager.setEmail("alice@barilog.com");
         manager.setRole("MANAGER");
+        manager.setIsActive(true);
+        lenient().when(directoryAccess.currentActor()).thenReturn(manager);
+        lenient().when(contactVisibility.redactApartment(any(), any(), any())).thenAnswer(inv -> inv.getArgument(2));
 
         building = new Building();
         building.setId(10L);

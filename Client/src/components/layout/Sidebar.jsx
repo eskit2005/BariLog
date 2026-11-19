@@ -29,6 +29,7 @@ export const Sidebar = ({ user, onLogout }) => {
   const navItems = [
     { label: 'Overview', to: '/', icon: Home, end: true },
     { label: 'Apartment Registry', to: '/apartments', icon: Building2 },
+    ...(user?.role !== 'STAFF' ? [{ label: 'Resident Directory', to: '/directory', icon: ShieldCheck }] : []),
     { label: 'Documents & Repository', to: '/documents', icon: FileText },
     { label: 'Finance & Ledger', to: '/finance', icon: Receipt, badge: 'Soon' },
     { label: 'Maintenance & SLA', to: '/maintenance', icon: Wrench, badge: 'Soon' },

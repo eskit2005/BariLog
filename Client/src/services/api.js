@@ -2,7 +2,9 @@ const API_BASE = '/api';
 
 let memoryToken = localStorage.getItem('barilog_token') || null;
 
-export const setAuthToken = (token) => {
+let sessionVersion = 0;
+let refreshPromise = null;
+const persistToken = (token) => {
   memoryToken = token;
   if (token) {
     localStorage.setItem('barilog_token', token);
@@ -11,9 +13,23 @@ export const setAuthToken = (token) => {
   }
 };
 
+export const setAuthToken = (token) => {
+  sessionVersion++;
+  persistToken(token);
+};
 export const getAuthToken = () => memoryToken;
 
+async function refreshAccessToken() {
+  if (!refreshPromise) {
+    refreshPromise = fetch(`${API_BASE}/auth/refresh`, {method: 'GET', credentials: 'include'})
+      .then(async response => response.ok ? (await response.json()).accessToken : null)
+      .finally(() => { refreshPromise = null; });
+  }
+  return refreshPromise;
+}
+
 export async function apiFetch(endpoint, options = {}) {
+  const requestSession = sessionVersion;
   const headers = {
     'Content-Type': 'application/json',
     ...(options.headers || {}),
@@ -23,7 +39,7 @@ export async function apiFetch(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${memoryToken}`;
   }
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
+  let response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     headers,
     credentials: 'include',
@@ -32,18 +48,16 @@ export async function apiFetch(endpoint, options = {}) {
   if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
     // Attempt refresh
     try {
-      const refreshRes = await fetch(`${API_BASE}/auth/refresh`, {
-        method: 'GET',
-        credentials: 'include',
-      });
-      if (refreshRes.ok) {
-        const { accessToken } = await refreshRes.json();
-        setAuthToken(accessToken);
+      const accessToken = await refreshAccessToken();
+      if (options.signal?.aborted || sessionVersion !== requestSession) throw new DOMException('Aborted', 'AbortError');
+      if (accessToken) {
+        persistToken(accessToken);
         headers['Authorization'] = `Bearer ${accessToken}`;
-        return fetch(`${API_BASE}${endpoint}`, { ...options, headers, credentials: 'include' });
+        response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers, credentials: 'include' });
       }
-    } catch {
-      setAuthToken(null);
+    } catch (error) {
+      if (error.name === 'AbortError') throw error;
+      if (sessionVersion === requestSession) setAuthToken(null);
     }
   }
 
@@ -227,3 +241,23 @@ export const markAgreementNoted = (id) =>
 
 // Expiry reminders (notices + agreements expiring within N days)
 export const getExpiryReminders = (days = 30) => apiFetch(`/documents/expiring?days=${days}`);
+
+// Resident directory and building assignments
+export const getDirectoryBuildings = (options = {}) => apiFetch('/directory/buildings', options);
+export const getDirectoryPreferences = (options = {}) => apiFetch('/directory/me/preferences', options);
+export const updateDirectoryPreferences = (payload, options = {}) => apiFetch('/directory/me/preferences', {...options, method:'PUT', body:JSON.stringify(payload)});
+const directoryPath = (buildingId) => {
+  if (!Number.isInteger(Number(buildingId)) || Number(buildingId) < 1) throw new Error('A valid building is required');
+  return `/buildings/${Number(buildingId)}`;
+};
+const accountId = (id) => {
+  if (!Number.isInteger(Number(id)) || Number(id) < 1) throw new Error('A valid account ID is required');
+  return Number(id);
+};
+export const getResidentDirectory = (id, options = {}) => apiFetch(`${directoryPath(id)}/directory`, options);
+export const getResidentEmergency = (id, residentId, options = {}) => apiFetch(`${directoryPath(id)}/directory/${accountId(residentId)}/emergency`, options);
+export const updateResidentEmergency = (id, residentId, payload, options = {}) => apiFetch(`${directoryPath(id)}/directory/${accountId(residentId)}/emergency`, {...options, method:'PUT', body:JSON.stringify(payload)});
+export const getSecurityAssignments = (id, options = {}) => apiFetch(`${directoryPath(id)}/security-assignments`, options);
+export const assignBuildingSecurity = (id, guardId, options = {}) => apiFetch(`${directoryPath(id)}/security-assignments/${accountId(guardId)}`, {...options, method:'PUT'});
+export const revokeBuildingSecurity = (id, guardId, options = {}) => apiFetch(`${directoryPath(id)}/security-assignments/${accountId(guardId)}`, {...options, method:'DELETE'});
+export const assignBuildingManager = (id, managerId, options = {}) => apiFetch(`${directoryPath(id)}/manager`, {...options, method:'PUT', body:JSON.stringify({managerId:accountId(managerId)})});

@@ -25,6 +25,6 @@ public class RegisterRequest {
     private String phoneNumber;
 
     @NotBlank(message = "Role is required")
-    @Pattern(regexp = "ADMIN|MANAGER|RESIDENT|STAFF|SECURITY", message = "Role must be one of: ADMIN, MANAGER, RESIDENT, STAFF, SECURITY")
+    @Pattern(regexp = "RESIDENT", message = "Public registration is available for residents only")
     private String role;
 }

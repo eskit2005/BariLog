@@ -9,6 +9,7 @@ export const Overview = () => {
   const isManager = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
   const modules = [
+    ...(user?.role !== 'STAFF' ? [{title:'Resident Directory', feature:'Feature 04 (Active)', desc:'Find neighbors, manage contact sharing, and access authorized emergency contacts.', icon:Users, path:'/directory', ready:true}] : []),
     {
       title: isManager ? 'Apartment Registry & Occupancy' : 'Building Directory & Units',
       feature: 'Feature 01 (Active)',
