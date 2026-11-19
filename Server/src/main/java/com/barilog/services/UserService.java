@@ -33,7 +33,6 @@ public class UserService {
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        if (!"RESIDENT".equals(request.getRole())) throw new IllegalArgumentException("Public registration creates resident accounts only");
         if (userRepository.countByEmail(request.getEmail()) > 0) {
             throw new DuplicateResourceException("Email already in use: " + request.getEmail());
         }

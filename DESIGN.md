@@ -19,6 +19,7 @@ This file guides the visual identity, component styling, and future interface pa
 | Elevation/list views | `Client/src/pages/ApartmentRegistry/ApartmentRegistry.jsx` |
 | Unit details and history | `Client/src/components/apartment/UnitSlideOver.jsx` |
 | Rules, notices, complaints, agreements | `Client/src/pages/DocumentRepository/DocumentRepository.jsx` |
+| Resident directory & emergency contacts | `Client/src/pages/ResidentDirectory/ResidentDirectory.jsx` |
 
 ---
 
@@ -138,7 +139,7 @@ Current components vary: for example, Documents uses a `22px`/`700` title and `1
 
 **Current:** A fixed `240px` left rail, top contextual header with building selector, and content canvas. `AppLayout` offsets the content by `240px`; the shell does not currently collapse into mobile bottom navigation. The sidebar uses the same items for every role; page controls and document tabs vary by role.
 
-Implemented routes: Overview (`/`), Apartment Registry (`/apartments`), and Documents (`/documents`). Finance, Maintenance & SLA, Gate & Visitors, and Audit & Analytics sidebar links carry “Soon” badges; their routes fall back to Overview. Overview is a module launcher and does not currently include a Documents card; use the sidebar to open that page.
+Implemented routes: Overview (`/`), Apartment Registry (`/apartments`), Resident Directory (`/directory`), and Documents (`/documents`). Finance, Maintenance & SLA, Gate & Visitors, and Audit & Analytics sidebar links carry “Soon” badges; their routes fall back to Overview. Overview acts as a central module launcher with active cards for Apartment Registry, Resident Directory, and Documents & Repository.
 
 **Planned:** A Bottom Action Bar for mobile field users, the role-specific navigation groups below, a staff job queue, and a security kiosk.
 
@@ -175,6 +176,13 @@ Implemented routes: Overview (`/`), Apartment Registry (`/apartments`), and Docu
 * A warning-tinted banner lists expiry reminders. Colored pills distinguish `OPEN`/`RESOLVED` complaints and `PENDING`/`NOTED` agreements.
 * Per-user tab badges and `NEW` tags use browser localStorage. They are local activity cues, not shared read receipts or delivered notifications.
 * This workspace edits structured text/date records. File previews, uploads/downloads, and configurable document permission tiers are planned. The selected building does not filter these records.
+
+### Pattern C: Resident Directory & Emergency Contact Phonebook (Implemented for Feature 03/04)
+
+* Building-scoped community phonebook with resident search, unit/floor grouping, and live occupancy status indicators.
+* Three-tier independent privacy controls: explicit separate checkboxes for phone visibility, email visibility, and emergency contact visibility (defaulted to hidden for peer residents).
+* Authorized emergency contacts drawer with quick-action `tel:` links for next-of-kin, blood group, and physician contacts.
+* Role-specific permissions: Building managers and assigned security personnel maintain emergency records and access contact details regardless of peer consent.
 
 ---
 

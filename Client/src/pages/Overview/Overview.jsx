@@ -1,6 +1,6 @@
 import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Users, Receipt, Wrench, Shield, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Building2, Users, Receipt, Wrench, Shield, ArrowRight, ShieldCheck, FileText } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
 
 export const Overview = () => {
@@ -9,7 +9,14 @@ export const Overview = () => {
   const isManager = user?.role === 'MANAGER' || user?.role === 'ADMIN';
 
   const modules = [
-    ...(user?.role !== 'STAFF' ? [{title:'Resident Directory', feature:'Feature 04 (Active)', desc:'Find neighbors, manage contact sharing, and access authorized emergency contacts.', icon:Users, path:'/directory', ready:true}] : []),
+    {
+      title: 'Resident Directory',
+      feature: 'Feature 03 (Active)',
+      desc: 'Building-scoped resident phonebook, contact sharing preferences, and authorized emergency contacts register.',
+      icon: Users,
+      path: '/directory',
+      ready: true,
+    },
     {
       title: isManager ? 'Apartment Registry & Occupancy' : 'Building Directory & Units',
       feature: 'Feature 01 (Active)',
@@ -18,6 +25,14 @@ export const Overview = () => {
         : 'View building elevation layout, flat numbers, physical specifications, and authorized community directory.',
       icon: Building2,
       path: '/apartments',
+      ready: true,
+    },
+    {
+      title: 'Documents & Repository',
+      feature: 'Feature 03 (Active)',
+      desc: 'Digital repository for official bylaws, community notices, maintenance agreements, and resident complaints.',
+      icon: FileText,
+      path: '/documents',
       ready: true,
     },
     {

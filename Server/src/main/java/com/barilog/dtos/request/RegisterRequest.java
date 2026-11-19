@@ -21,10 +21,12 @@ public class RegisterRequest {
     @Size(min = 6, max = 255, message = "Password must be at least 6 characters")
     private String password;
 
-    @Size(max = 30, message = "Phone number cannot exceed 30 characters")
+    @NotBlank(message = "Phone number is required")
+    @Size(min = 6, max = 30, message = "Phone number must be between 6 and 30 characters")
+    @Pattern(regexp = "^[+0-9\\s\\-\\(\\)]{6,30}$", message = "Please provide a valid phone number")
     private String phoneNumber;
 
     @NotBlank(message = "Role is required")
-    @Pattern(regexp = "RESIDENT", message = "Public registration is available for residents only")
+    @Pattern(regexp = "ADMIN|MANAGER|RESIDENT|STAFF|SECURITY", message = "Role must be one of: ADMIN, MANAGER, RESIDENT, STAFF, SECURITY")
     private String role;
 }

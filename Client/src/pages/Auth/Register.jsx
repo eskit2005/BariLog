@@ -10,7 +10,7 @@ export const Register = () => {
     email: '',
     password: '',
     phoneNumber: '',
-    role: 'RESIDENT',
+    role: 'MANAGER',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -80,7 +80,8 @@ export const Register = () => {
             <div style={styles.inputWrapper}>
               <Phone size={16} color="var(--text-muted)" style={styles.inputIcon} />
               <input
-                type="text"
+                type="tel"
+                required
                 placeholder="+8801711223344"
                 value={formData.phoneNumber}
                 onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
@@ -102,6 +103,23 @@ export const Register = () => {
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 style={styles.input}
               />
+            </div>
+          </div>
+
+          <div style={styles.formGroup}>
+            <label style={styles.label}>I am registering as...</label>
+            <div style={styles.inputWrapper}>
+              <ShieldCheck size={16} color="var(--text-muted)" style={styles.inputIcon} />
+              <select
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                style={styles.input}
+              >
+                <option value="MANAGER">Building Manager / Committee Member</option>
+                <option value="RESIDENT">Resident / Apartment Tenant</option>
+                <option value="STAFF">Maintenance Staff / Technician</option>
+                <option value="SECURITY">Security Personnel / Gatekeeper</option>
+              </select>
             </div>
           </div>
 
