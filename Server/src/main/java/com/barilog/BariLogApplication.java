@@ -20,8 +20,8 @@ public class BariLogApplication {
     private static void loadEnvFile() {
         File[] candidateFiles = new File[] {
             new File(".env"),
-            new File("Server/.env"),
-            new File("../Server/.env")
+            new File("../.env"),
+            new File("Server/.env")
         };
 
         for (File file : candidateFiles) {
@@ -48,7 +48,6 @@ public class BariLogApplication {
                     }
                 } catch (Exception ignored) {
                 }
-                break;
             }
         }
     }
