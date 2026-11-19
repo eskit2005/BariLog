@@ -22,7 +22,12 @@ export const AppLayout = () => {
       } else if (list.length > 0) {
         setSelectedBuildingId((prev) => {
           const exists = list.some((b) => b.id === Number(prev));
-          return exists ? prev : list[0].id;
+          if (exists) return prev;
+          if (user?.role === 'MANAGER') {
+            const managed = list.find((b) => b.managerId === user?.id);
+            if (managed) return managed.id;
+          }
+          return list[0].id;
         });
       } else {
         setSelectedBuildingId(null);

@@ -34,9 +34,10 @@ public class BuildingService {
     private final BuildingMapper buildingMapper;
     private final FloorMapper floorMapper;
     private final DirectoryAccessService directoryAccess;
-    private void checkSecurity(Long id) {
+
+    private void checkReadAccess(Long id) {
         User actor = directoryAccess.currentActor();
-        if ("SECURITY".equals(actor.getRole())) directoryAccess.requireReadAccess(actor, id);
+        directoryAccess.requireReadAccess(actor, id);
     }
 
     @Transactional
@@ -65,7 +66,7 @@ public class BuildingService {
     }
 
     public BuildingResponse getBuildingById(Long id) {
-        checkSecurity(id);
+        checkReadAccess(id);
         Building building = buildingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found with ID: " + id));
         return buildingMapper.toResponse(building);
@@ -74,7 +75,7 @@ public class BuildingService {
     public List<BuildingResponse> getAllBuildings() {
         User actor = directoryAccess.currentActor();
         return buildingRepository.findAll().stream()
-                .filter(b -> !"SECURITY".equals(actor.getRole()) || directoryAccess.canReadBuilding(actor, b))
+                .filter(b -> directoryAccess.canReadBuilding(actor, b))
                 .map(buildingMapper::toResponse)
                 .toList();
     }
@@ -104,7 +105,7 @@ public class BuildingService {
     }
 
     public List<FloorResponse> getFloorsByBuilding(Long buildingId) {
-        checkSecurity(buildingId);
+        checkReadAccess(buildingId);
         if (!buildingRepository.existsById(buildingId)) {
             throw new ResourceNotFoundException("Building not found with ID: " + buildingId);
         }
@@ -114,7 +115,7 @@ public class BuildingService {
     }
 
     public OccupancyStatsResponse getOccupancyStats(Long buildingId) {
-        checkSecurity(buildingId);
+        checkReadAccess(buildingId);
         Building building = buildingRepository.findById(buildingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Building not found with ID: " + buildingId));
 

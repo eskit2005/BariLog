@@ -50,13 +50,13 @@ The backend checks authentication and role permissions; the frontend hides restr
 
 | Role | System Authority | Current behavior |
 | :--- | :--- | :--- |
-| **Building Manager / Committee** | `ROLE_MANAGER` | Create buildings/floors; create, edit, and delete vacant apartments; change occupancy; create rules; publish/delete notices; resolve complaints; add and acknowledge maintenance agreements. |
-| **Resident / Apartment Tenant** | `ROLE_RESIDENT` | Read registry data, rules, and active notices; submit/view own complaints; submit maintenance agreements and view own plus manager/admin-submitted agreements. |
+| **Building Manager / Committee** | `ROLE_MANAGER` | Create buildings/floors; create, edit, and delete vacant apartments; change occupancy; create rules; publish/delete notices; resolve complaints for managed buildings; add building maintenance agreements and acknowledge resident agreements. Managers cannot be assigned as apartment residents/tenants. |
+| **Resident / Apartment Tenant** | `ROLE_RESIDENT` | Read registry data, rules, and active notices; submit/view own complaints; submit flat maintenance agreements and view building-wide plus own agreements. |
 | **Maintenance Staff / Vendor** | `ROLE_STAFF` | Authenticated read access to registry, rules, and active notices; dedicated job queue is planned. |
-| **Security Personnel** | `ROLE_SECURITY` | Authenticated read access to registry, rules, and active notices; gatekeeper portal is planned. |
-| **System Administrator** | `ROLE_ADMIN` | Manager module actions plus user deletion through the API. |
+| **Security Personnel** | `ROLE_SECURITY` | Authenticated read access to assigned building registry, emergency directory, rules, and active notices; gatekeeper portal is planned. |
+| **System Administrator** | `ROLE_ADMIN` | Manager module actions plus user deletion and cross-building manager assignments through the API. |
 
-`GET /api/users` is available to managers/admins. Registry reads require authentication but are not restricted to a resident's own apartment. Document data is filtered by role and submitter; the document module currently has no building association or per-building filtering.
+`GET /api/users` is available to managers/admins. Registry reads and modifications enforce strict building authorization: managers only see buildings they manage, and querying another manager's building yields `403 Forbidden`. Document complaints and maintenance agreements are scoped to the manager's assigned buildings (`isResidentInManagedBuilding`); outsider managers cannot view complaints or resolve issues in other managers' buildings (`403 Forbidden`).
 
 ---
 
@@ -184,6 +184,11 @@ Feature 01 has backend and frontend implementations:
    - Creation and the occupancy transition endpoint generate records in `occupancy_history`, capturing previous/new state, user, effective date, and notes. There is no history edit endpoint; deleting a vacant apartment cascades to its history, so this is not permanent audit retention.
 6. **Deletion Guard**:
    - Occupied flats cannot be deleted (`400 Bad Request`). Units must first be transitioned to `VACANT` before removal.
+7. **Manager Decoupling & Owner-Occupant Tracking**:
+   - Managers and administrators cannot be assigned as apartment residents, owners, or tenants (`400 Bad Request: Building managers and administrators cannot be assigned as apartment residents`). This prevents role conflicts and audit pollution.
+   - When a unit is transitioned to `OWNER_OCCUPIED` and no separate tenant is specified, the owner is tracked as the active resident for directory and emergency rosters.
+8. **Multi-Building Isolation**:
+   - Managers can only view and manage apartments in buildings explicitly assigned to them. Querying apartments, floors, or occupancy stats for another manager's building results in `403 Forbidden`.
 
 ---
 
@@ -193,11 +198,14 @@ The `/documents` page and `/api/documents` endpoints store structured records in
 
 - **Building Rules:** authenticated users read; managers/admins create. V3 seeds 10 standard rules.
 - **Notices:** managers/admins create, delete, and view all; other users read active notices. Categories: `GENERAL`, `URGENT`, `MAINTENANCE`, `EVENT`.
-- **Complaints:** residents submit and view their own; managers/admins view all and resolve with a note. Statuses: `OPEN` → `RESOLVED`.
-- **Maintenance Agreements:** residents submit records as `PENDING`; managers/admins add records as `NOTED` and acknowledge resident submissions. Non-managers see their own plus manager/admin-submitted agreements.
+- **Complaints:** residents submit and view their own; managers/admins view complaints filed by residents living within their assigned buildings (`isResidentInManagedBuilding`). Resolving complaints for residents in other managers' buildings is rejected with `403 Forbidden` (`AccessDeniedException`). Statuses: `OPEN` → `RESOLVED`.
+- **Maintenance Agreements:**
+  - **Building-Level Contracts (Common Areas):** Created by building managers/admins for common infrastructure (elevators, standby generators, fire safety, water pumps). Automatically marked `NOTED` and visible to all building owners and residents for financial transparency, SLA verification, and auditing of service charge utilization.
+  - **Flat-Level Contracts (Private Units):** Submitted by residents/owners for private in-unit contractor work (AC installation, carpentry, pest control) as `PENDING`. Managers review and acknowledge them (`NOTED`) so security and management are informed of external technicians on-premise.
+  - Managers only see and acknowledge maintenance agreements belonging to their managed buildings.
 - **Expiry reminders:** on-demand API query and page banner, default 30 days, maximum 365. Invalid windows below 1 use 30 days. Agreement results include already expired records; notices are restricted to the upcoming window.
 
-The page has role-based tabs and per-user “new” markers stored in browser localStorage. These markers are not server-side read receipts. Records are not scoped to the selected building. General file upload/download, document access tiers, and background email/SMS/push delivery are not implemented.
+The page has role-based tabs and per-user “new” markers stored in browser localStorage. These markers are not server-side read receipts. Complaints and maintenance agreements are strictly scoped to the manager's assigned buildings. General file upload/download, document access tiers, and background email/SMS/push delivery are not implemented.
 
 ---
 
@@ -297,10 +305,10 @@ For a disposable local database only: stop the backend, back up anything needed,
 1. Use an existing trusted manager account; public registration creates resident accounts only.
 2. Obtain that account through trusted local/administrator provisioning if none exists.
 3. Sign in on the `/login` screen.
-4. You will be greeted with the **Building Elevation View** on `/apartments`.
+4. You will be greeted with the **Overview** dashboard on `/overview` (or click **Apartment Registry** on `/apartments`).
 5. Click **"New Building"** → Name: `Green Valley Tower A`, Address: `Road 12, Banani`, Total Floors: `10`.
 6. Click **"Add Floor"** → Floor: `1`, Wing: `Main`.
-7. Click **"+ Register Apartment"** → Unit: `1A`, Gross Area: `1450 sqft`, Layout: `3 BHK`, Owner: `Mr. Rahim`, Status: `VACANT`.
+7. Click **"+ Register Apartment"** → Unit: `1A`, Gross Area: `1450 sqft`, Layout: `3 BHK`, Owner: `Mr. Rahim`, Status: `VACANT`. *(Note: Managers/admins cannot be selected as residents or tenants).*
 8. The unit immediately appears in the elevation matrix. Click on unit `1A` to inspect its slide-over specs drawer.
 9. Click **"Change Status"** inside the drawer → Change to `RENTED` or `OWNER_OCCUPIED`, specify effective transition date and reason notes. `RENTED` requires the user ID of an existing resident; register that account first.
 10. The drawer instantly appends a new chronological entry to the **Occupancy Audit Trail**.
@@ -452,12 +460,12 @@ All paths below start with `/api/documents`. All require authentication. Read re
 | GET | `/notices` | Authenticated: active notices; managers/admins see all |
 | POST | `/notices` | Manager/admin: publish notice |
 | DELETE | `/notices/{id}` | Manager/admin: delete notice |
-| GET | `/complaints` | Own complaints; managers/admins see all |
+| GET | `/complaints` | Resident: own complaints; Manager: complaints from residents in managed buildings; Admin: all |
 | POST | `/complaints` | Resident: create complaint |
-| PATCH | `/complaints/{id}/resolve` | Manager/admin: resolve with `resolutionNote` |
-| GET | `/maintenance` | Own plus management submissions; managers/admins see all |
-| POST | `/maintenance` | Resident/manager/admin: submit agreement |
-| PATCH | `/maintenance/{id}/noted` | Manager/admin: acknowledge agreement |
+| PATCH | `/complaints/{id}/resolve` | Manager/admin: resolve with `resolutionNote` (`403 Forbidden` for complaints outside manager's buildings) |
+| GET | `/maintenance` | Resident/Owner: own submissions + building-wide contracts; Manager: agreements within managed buildings; Admin: all |
+| POST | `/maintenance` | Resident/owner: submit flat agreement (`PENDING`); Manager/admin: submit building agreement (`NOTED`) |
+| PATCH | `/maintenance/{id}/noted` | Manager/admin: acknowledge flat agreement (`403 Forbidden` outside manager's buildings) |
 | GET | `/expiring?days=30` | Authenticated: filtered expiry reminder data |
 
 Example resident complaint body for `POST /api/documents/complaints`:
@@ -511,11 +519,11 @@ When developing subsequent features (e.g., Feature 04 Resident Directory, Featur
 
 ## Resident Directory (Feature 04)
 
-Open `/directory` to search current residents in an authorized building. Residents control three independent sharing settings, hidden from peers by default. Managers/admins maintain optional emergency records; building managers and assigned security retain emergency access. Managers assign existing security account IDs to their own buildings; admins can associate a manager with a building. Existing apartment contact responses follow the same privacy rules.
+Open `/directory` to search current residents in an authorized building. Residents control three independent sharing settings (`sharePhone`, `shareEmail`, `shareEmergencyDetails`), hidden from peers by default. Privacy settings can be viewed and saved through `GET|PUT /api/directory/me/preferences` or `GET|PUT /api/directory/privacy`. Managers/admins maintain optional emergency records; building managers and assigned security retain operational emergency access regardless of peer-sharing switches. Managers assign existing security account IDs to their own buildings; admins can associate a manager with a building. Existing apartment contact responses follow the same privacy rules.
 
-The next backend startup applies Flyway V4 without resetting existing records. Public registration accepts `RESIDENT` only; existing manager/admin/security accounts still log in. Privileged account provisioning for new installations is a separate administrative requirement. Earlier examples showing privileged self-registration are superseded by this restriction.
+Multi-building isolation guarantees that managers and security personnel can only view directories, resident rosters, and emergency details for buildings they have been assigned to. Registration requires phone number validation on both frontend and backend. Managers and administrators are strictly decoupled from apartment tenancy.
 
-Directory API: `GET /api/directory/buildings`; `GET|PUT /api/directory/me/preferences`; `GET /api/buildings/{id}/directory`; `GET|PUT /api/buildings/{id}/directory/{residentId}/emergency`; `GET /api/buildings/{id}/security-assignments`; `PUT|DELETE /api/buildings/{id}/security-assignments/{securityUserId}`; admin-only `PUT /api/buildings/{id}/manager` with `managerId`.
+Directory API: `GET /api/directory/buildings`; `GET|PUT /api/directory/me/preferences` (and alias `GET|PUT /api/directory/privacy`); `GET /api/buildings/{id}/directory`; `GET|PUT /api/buildings/{id}/directory/{residentId}/emergency`; `GET /api/buildings/{id}/security-assignments`; `PUT|DELETE /api/buildings/{id}/security-assignments/{securityUserId}`; admin-only `PUT /api/buildings/{id}/manager` with `managerId`.
 
 See [verification and usage](docs/verification/feature-04-resident-directory.md) for commands, tested scope, and manual acceptance checks.
 

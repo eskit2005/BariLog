@@ -175,14 +175,18 @@ Implemented routes: Overview (`/`), Apartment Registry (`/apartments`), Resident
 * Rules and Notices tabs are visible to all roles. Complaints and Maintenance Agreements tabs are shown to residents/managers/admins. Creation, resolution, and acknowledgement controls follow role permissions.
 * A warning-tinted banner lists expiry reminders. Colored pills distinguish `OPEN`/`RESOLVED` complaints and `PENDING`/`NOTED` agreements.
 * Per-user tab badges and `NEW` tags use browser localStorage. They are local activity cues, not shared read receipts or delivered notifications.
-* This workspace edits structured text/date records. File previews, uploads/downloads, and configurable document permission tiers are planned. The selected building does not filter these records.
+* Complaints and maintenance agreements are strictly building-scoped and manager-isolated: managers only see complaints and agreements for residents living within their assigned buildings, and resolving complaints across buildings is rejected with `403 Forbidden`.
+* Maintenance agreements follow a two-tier model:
+  - **Building-Level Contracts (Elevators, Generator, Fire Safety):** Created by managers/admins, set immediately to `NOTED`, and visible to all owners and residents for full financial transparency and SLA auditability.
+  - **Flat-Level Contracts (In-unit repairs, AC servicing):** Submitted by residents/owners as `PENDING`, then reviewed and marked `NOTED` by managers so building security is aware of external vendors on-premise.
+* This workspace edits structured text/date records. File previews, uploads/downloads, and configurable document permission tiers are planned.
 
 ### Pattern C: Resident Directory & Emergency Contact Phonebook (Implemented for Feature 03/04)
 
 * Building-scoped community phonebook with resident search, unit/floor grouping, and live occupancy status indicators.
-* Three-tier independent privacy controls: explicit separate checkboxes for phone visibility, email visibility, and emergency contact visibility (defaulted to hidden for peer residents).
+* Three-tier independent privacy controls: explicit separate checkboxes for phone visibility, email visibility, and emergency contact visibility (`sharePhone`, `shareEmail`, `shareEmergencyDetails`), defaulted to hidden for peer residents, managed directly via the Contact Privacy card (`/api/directory/me/preferences` and `/api/directory/privacy`).
 * Authorized emergency contacts drawer with quick-action `tel:` links for next-of-kin, blood group, and physician contacts.
-* Role-specific permissions: Building managers and assigned security personnel maintain emergency records and access contact details regardless of peer consent.
+* Role-specific permissions: Building managers and assigned security personnel maintain emergency records and access contact details regardless of peer consent. Cross-building isolation prevents managers or security staff from accessing rosters in buildings they are not assigned to.
 
 ---
 

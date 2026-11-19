@@ -95,6 +95,8 @@ class ApartmentServiceTest {
         manager.setRole("MANAGER");
         manager.setIsActive(true);
         lenient().when(directoryAccess.currentActor()).thenReturn(manager);
+        lenient().when(directoryAccess.canReadBuilding(any(), any())).thenReturn(true);
+        lenient().when(directoryAccess.requireReadAccess(any(), any())).thenReturn(building);
         lenient().when(contactVisibility.redactApartment(any(), any(), any())).thenAnswer(inv -> inv.getArgument(2));
 
         building = new Building();

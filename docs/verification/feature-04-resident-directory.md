@@ -2,9 +2,9 @@
 
 Open `/directory` after signing in. The building selector shows only buildings available to that account. Registered active residents appear once per building with their occupied unit labels.
 
-Residents can save three independent sharing switches. All default to off. These switches control peer access; management and assigned security retain operational/emergency access. Emergency profiles contain optional blood group, next-of-kin, and physician information. Managers/admins edit profiles; residents/security read them.
+Residents can save three independent sharing switches (`sharePhone`, `shareEmail`, `shareEmergencyDetails`). All default to off. These switches control peer access; management and assigned security retain operational/emergency access. Emergency profiles contain optional blood group, next-of-kin, and physician information. Managers/admins edit profiles; residents/security read them. Privacy settings can be retrieved and saved using either `/api/directory/me/preferences` or `/api/directory/privacy`.
 
-Managers assign an existing security account by its numeric user ID in **Building security**. Only the building's manager or an admin can assign/revoke. An admin can associate a manager using **Building manager**. Removing an assignment denies the next request even with the same JWT. These operations do not create accounts.
+Managers assign an existing security account by its numeric user ID in **Building security**. Only the building's manager or an admin can assign/revoke. An admin can associate a manager using **Building manager**. Removing an assignment denies the next request even with the same JWT. These operations do not create accounts. Multi-building isolation guarantees that managers and security guards only access buildings they manage or are assigned to. Managers and administrators are decoupled from tenancy and cannot be assigned as apartment residents.
 
 Public registration now creates resident accounts only. Existing privileged accounts can still sign in. A clean installation needs trusted administrator/manager/security provisioning outside this feature; no public privileged-account creation route is provided. Buildings created by managers are associated with that manager by default. Existing unassigned buildings require an admin association.
 
@@ -30,6 +30,10 @@ Use fictional records and separate resident/manager/security sessions. Never com
 - [ ] Share/unshare emergency details; other residents' next fetch follows the setting.
 - [ ] Manager/security retain access regardless of peer-sharing switches.
 - [ ] Guard assigned to A cannot request B directory, building, floors, stats, apartments or history, even by editing the URL.
+- [ ] Manager assigned to A cannot access building B apartments, stats, or complaints (returns 403 Forbidden).
+- [ ] Manager cannot resolve complaints filed by residents in another manager's building (returns 403 Forbidden).
+- [ ] Building-level maintenance agreements are visible to owners and residents in NOTED status; flat-level agreements start PENDING until acknowledged.
+- [ ] Assigning a manager/admin as an apartment resident/tenant fails with 400 Bad Request.
 - [ ] Revoke guard A assignment; next request fails. A separate B assignment remains usable.
 - [ ] Manager edits/clears a profile; resident can read own updated record but cannot edit it.
 - [ ] Delayed responses during building/resident switches do not show the previous selection's contacts.
@@ -41,7 +45,7 @@ Contact responses use `Cache-Control: no-store`. Directory/emergency records are
 
 ## Recorded implementation checks
 
-- Backend: 17 tests, zero failures/errors/skips (`./mvnw test`).
+- Backend: 19 tests, zero failures/errors/skips (`./mvnw test`).
 - Client transport: five tests passed (`node --test src/services/api.test.js`).
 - Client production build: passed (`npm run build`).
 - Headless Chrome: route load, default-off settings, independent preference payload, emergency `tel:` link, manager edit controls, and narrow viewport rendering passed. This smoke uses mocked API responses; backend authorization/persistence are tested separately through MockMvc and SQLite.

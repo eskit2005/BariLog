@@ -54,6 +54,8 @@ export async function apiFetch(endpoint, options = {}) {
         persistToken(accessToken);
         headers['Authorization'] = `Bearer ${accessToken}`;
         response = await fetch(`${API_BASE}${endpoint}`, { ...options, headers, credentials: 'include' });
+      } else {
+        if (sessionVersion === requestSession) setAuthToken(null);
       }
     } catch (error) {
       if (error.name === 'AbortError') throw error;
@@ -63,9 +65,19 @@ export async function apiFetch(endpoint, options = {}) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
+    let defaultMsg = 'API request failed';
+    if (response.status === 401) {
+      defaultMsg = 'Your session has expired. Please sign in again.';
+    } else if (response.status === 403) {
+      defaultMsg = 'Access denied. You do not have permission for this request.';
+    } else if (response.status === 404) {
+      defaultMsg = 'The requested resource was not found.';
+    } else if (response.status >= 500) {
+      defaultMsg = 'Server encountered an error. Please try again.';
+    }
     throw {
       status: response.status,
-      message: errorData.message || (errorData.errors ? errorData.errors.join(', ') : 'API request failed'),
+      message: errorData.message || (errorData.errors ? errorData.errors.join(', ') : defaultMsg),
       errors: errorData.errors || [],
     };
   }
@@ -248,6 +260,9 @@ export const getExpiryReminders = (days = 30) => apiFetch(`/documents/expiring?d
 export const getDirectoryBuildings = (options = {}) => apiFetch('/directory/buildings', options);
 export const getDirectoryPreferences = (options = {}) => apiFetch('/directory/me/preferences', options);
 export const updateDirectoryPreferences = (payload, options = {}) => apiFetch('/directory/me/preferences', {...options, method:'PUT', body:JSON.stringify(payload)});
+export const getMyEmergencyDetails = (options = {}) => apiFetch('/directory/me/emergency', options);
+export const updateMyEmergencyDetails = (payload, options = {}) => apiFetch('/directory/me/emergency', {...options, method:'PUT', body:JSON.stringify(payload)});
+export const updateMyPhoneNumber = (phoneNumber, options = {}) => apiFetch('/directory/me/phone', {...options, method:'PUT', body:JSON.stringify({ phoneNumber })});
 const directoryPath = (buildingId) => {
   if (!Number.isInteger(Number(buildingId)) || Number(buildingId) < 1) throw new Error('A valid building is required');
   return `/buildings/${Number(buildingId)}`;

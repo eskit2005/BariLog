@@ -149,11 +149,13 @@ export const UpdateOccupancyModal = ({ isOpen, onClose, apartment, onUpdated }) 
                     style={modalStyles.input}
                   >
                     <option value="">-- Use Existing Owner or Pick User --</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        #{u.id} {u.name} ({u.role || 'USER'}) {u.email ? `· ${u.email}` : ''}
-                      </option>
-                    ))}
+                    {users
+                      .filter((u) => u.role !== 'MANAGER' && u.role !== 'ADMIN')
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          #{u.id} {u.name} ({u.role || 'RESIDENT'}) {u.email ? `· ${u.email}` : ''}
+                        </option>
+                      ))}
                   </select>
                 </div>
               )}
@@ -170,11 +172,13 @@ export const UpdateOccupancyModal = ({ isOpen, onClose, apartment, onUpdated }) 
                   style={{ ...modalStyles.input, marginBottom: '8px' }}
                 >
                   <option value="">-- Choose Tenant User (or enter ID below) --</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      #{u.id} {u.name} ({u.role || 'USER'}) {u.email ? `· ${u.email}` : ''}
-                    </option>
-                  ))}
+                  {users
+                    .filter((u) => u.role !== 'MANAGER' && u.role !== 'ADMIN')
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        #{u.id} {u.name} ({u.role || 'RESIDENT'}) {u.email ? `· ${u.email}` : ''}
+                      </option>
+                    ))}
                 </select>
               )}
               <label style={{ ...modalStyles.label, fontSize: '12px', color: 'var(--text-muted)' }}>

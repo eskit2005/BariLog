@@ -354,7 +354,7 @@ All endpoints require authentication. All paths start with `/api`.
 | --- | --- | --- |
 | GET | `/directory/buildings` | `buildings()` |
 | GET | `/buildings/{id}/directory` | `directory(id)` |
-| GET / PUT | `/directory/me/preferences` | `preferences()` / `updatePreferences()` |
+| GET / PUT | `/directory/me/preferences` or `/directory/privacy` | `preferences()` / `updatePreferences()` |
 | GET / PUT | `/buildings/{id}/directory/{residentId}/emergency` | `emergency()` / `updateEmergency()` |
 | GET | `/buildings/{id}/security-assignments` | `list()` |
 | PUT / DELETE | `/buildings/{id}/security-assignments/{securityUserId}` | `assign()` / `revoke()` |

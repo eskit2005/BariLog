@@ -38,6 +38,10 @@ export const ApartmentRegistry = () => {
   } = useOutletContext();
 
   const activeBuildingId = selectedBuildingId || buildings[0]?.id;
+  const currentBuilding = buildings.find((b) => b.id === Number(activeBuildingId));
+  const canManageCurrentBuilding =
+    user?.role === 'ADMIN' ||
+    (user?.role === 'MANAGER' && (!currentBuilding?.managerId || currentBuilding?.managerId === user?.id));
 
   const [apartments, setApartments] = useState([]);
   const [floors, setFloors] = useState([]);
@@ -172,10 +176,28 @@ export const ApartmentRegistry = () => {
               <button onClick={() => setIsCreateBuildingOpen(true)} style={styles.secondaryBtn}>
                 <BuildingIcon size={15} /> New Building
               </button>
-              <button onClick={() => setIsAddFloorOpen(true)} style={styles.secondaryBtn}>
+              <button
+                onClick={() => setIsAddFloorOpen(true)}
+                disabled={!canManageCurrentBuilding}
+                title={!canManageCurrentBuilding ? `Managed by ${currentBuilding?.managerName || 'another manager'}. Management access restricted.` : 'Add a floor level to this building'}
+                style={{
+                  ...styles.secondaryBtn,
+                  opacity: canManageCurrentBuilding ? 1 : 0.55,
+                  cursor: canManageCurrentBuilding ? 'pointer' : 'not-allowed',
+                }}
+              >
                 <Layers size={15} /> Add Floor
               </button>
-              <button onClick={() => setIsCreateAptOpen(true)} style={styles.primaryBtn}>
+              <button
+                onClick={() => setIsCreateAptOpen(true)}
+                disabled={!canManageCurrentBuilding}
+                title={!canManageCurrentBuilding ? `Managed by ${currentBuilding?.managerName || 'another manager'}. Management access restricted.` : 'Register a new apartment unit'}
+                style={{
+                  ...styles.primaryBtn,
+                  opacity: canManageCurrentBuilding ? 1 : 0.55,
+                  cursor: canManageCurrentBuilding ? 'pointer' : 'not-allowed',
+                }}
+              >
                 <Plus size={15} /> Register Apartment
               </button>
             </>
@@ -187,6 +209,26 @@ export const ApartmentRegistry = () => {
           )}
         </div>
       </div>
+
+      {isManager && !canManageCurrentBuilding && currentBuilding && (
+        <div style={{
+          padding: '10px 16px',
+          marginBottom: '16px',
+          borderRadius: '8px',
+          backgroundColor: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          fontSize: '13px',
+          color: 'var(--text-secondary)'
+        }}>
+          <AlertCircle size={16} color="#d97706" />
+          <span>
+            <strong>Read-only mode:</strong> <em>{currentBuilding.name}</em> is managed by <strong>{currentBuilding.managerName || 'another assigned manager'}</strong>. Only the assigned building manager or system administrator can add floors or register units.
+          </span>
+        </div>
+      )}
 
       {/* Top Telemetry / KPI Summary Bar (Fintech / Blueprint pattern from DESIGN.md) */}
       {stats && (

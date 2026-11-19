@@ -44,19 +44,37 @@ public class ApartmentService {
         return contactVisibility.redactApartment(actor, apartment, apartmentMapper.toResponse(apartment));
     }
 
+    private void validateResidentUser(User resident) {
+        if (resident != null && ("MANAGER".equals(resident.getRole()) || "ADMIN".equals(resident.getRole()))) {
+            throw new IllegalArgumentException("Building managers and administrators cannot be assigned as apartment residents");
+        }
+    }
+
+    private void validateOwnerUser(User owner) {
+        if (owner != null && ("MANAGER".equals(owner.getRole()) || "ADMIN".equals(owner.getRole()))) {
+            throw new IllegalArgumentException("Building managers and administrators cannot be linked as apartment owners");
+        }
+    }
+
     private User resolveOrCreateOwner(ApartmentRequest request, String unitNumber, Long buildingId) {
         if (request == null) return null;
 
         if (request.getOwnerId() != null) {
-            return userRepository.findById(request.getOwnerId())
+            User owner = userRepository.findById(request.getOwnerId())
                     .orElseThrow(() -> new ResourceNotFoundException("Owner user not found with ID: " + request.getOwnerId()));
+            validateOwnerUser(owner);
+            return owner;
         }
 
         String email = request.getOwnerEmail() != null ? request.getOwnerEmail().trim() : null;
         if (email != null && !email.isBlank()) {
             java.util.Optional<User> byEmail = userRepository.findByEmail(email);
             if (byEmail.isPresent()) {
-                return byEmail.get();
+                User u = byEmail.get();
+                if ("MANAGER".equals(u.getRole()) || "ADMIN".equals(u.getRole())) {
+                    return null;
+                }
+                return u;
             }
         }
 
@@ -64,7 +82,11 @@ public class ApartmentService {
         if (phone != null && !phone.isBlank()) {
             java.util.Optional<User> byPhone = userRepository.findByPhoneNumber(phone);
             if (byPhone.isPresent()) {
-                return byPhone.get();
+                User u = byPhone.get();
+                if ("MANAGER".equals(u.getRole()) || "ADMIN".equals(u.getRole())) {
+                    return null;
+                }
+                return u;
             }
         }
 
@@ -140,14 +162,17 @@ public class ApartmentService {
             if (request.getCurrentResidentId() != null) {
                 User resident = userRepository.findById(request.getCurrentResidentId())
                         .orElseThrow(() -> new ResourceNotFoundException("Resident not found with ID: " + request.getCurrentResidentId()));
+                validateResidentUser(resident);
                 apartment.setCurrentResident(resident);
             } else if (apartment.getOwner() != null) {
+                validateResidentUser(apartment.getOwner());
                 apartment.setCurrentResident(apartment.getOwner());
             }
         } else if (apartment.getOccupancyStatus() == OccupancyStatus.RENTED) {
             if (request.getCurrentResidentId() != null) {
                 User resident = userRepository.findById(request.getCurrentResidentId())
                         .orElseThrow(() -> new ResourceNotFoundException("Resident not found with ID: " + request.getCurrentResidentId()));
+                validateResidentUser(resident);
                 apartment.setCurrentResident(resident);
             }
         } else {
@@ -166,44 +191,27 @@ public class ApartmentService {
     public ApartmentResponse getApartmentById(Long id) {
         Apartment apt = apartmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Apartment not found with ID: " + id));
+        directoryAccess.requireReadAccess(directoryAccess.currentActor(), apt.getBuilding().getId());
         return response(apt);
     }
 
     public List<ApartmentResponse> getApartments(Long buildingId, Long floorId, OccupancyStatus status, Long residentId, Long ownerId) {
         User actor = directoryAccess.currentActor();
-        if ("SECURITY".equals(actor.getRole())) {
-            if (buildingId != null) directoryAccess.requireReadAccess(actor, buildingId);
-            if (floorId != null) {
-                Floor floor = floorRepository.findById(floorId).orElseThrow(() -> new ResourceNotFoundException("Floor not found"));
-                directoryAccess.requireReadAccess(actor, floor.getBuilding().getId());
-            }
-            return apartmentRepository.findAll().stream()
+        if (buildingId != null) {
+            directoryAccess.requireReadAccess(actor, buildingId);
+        }
+        if (floorId != null) {
+            Floor floor = floorRepository.findById(floorId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Floor not found with ID: " + floorId));
+            directoryAccess.requireReadAccess(actor, floor.getBuilding().getId());
+        }
+        return apartmentRepository.findAll().stream()
                 .filter(a -> directoryAccess.canReadBuilding(actor, a.getBuilding()))
                 .filter(a -> buildingId == null || buildingId.equals(a.getBuilding().getId()))
                 .filter(a -> floorId == null || floorId.equals(a.getFloor().getId()))
                 .filter(a -> status == null || status == a.getOccupancyStatus())
                 .filter(a -> residentId == null || (a.getCurrentResident() != null && residentId.equals(a.getCurrentResident().getId())))
                 .filter(a -> ownerId == null || (a.getOwner() != null && ownerId.equals(a.getOwner().getId())))
-                .map(this::response).toList();
-        }
-        List<Apartment> list;
-        if (buildingId != null && status != null) {
-            list = apartmentRepository.findByBuildingIdAndOccupancyStatus(buildingId, status);
-        } else if (buildingId != null) {
-            list = apartmentRepository.findByBuildingId(buildingId);
-        } else if (floorId != null) {
-            list = apartmentRepository.findByFloorId(floorId);
-        } else if (status != null) {
-            list = apartmentRepository.findByOccupancyStatus(status);
-        } else if (residentId != null) {
-            list = apartmentRepository.findByCurrentResidentId(residentId);
-        } else if (ownerId != null) {
-            list = apartmentRepository.findByOwnerId(ownerId);
-        } else {
-            list = apartmentRepository.findAll();
-        }
-
-        return list.stream()
                 .map(this::response)
                 .toList();
     }
@@ -239,8 +247,10 @@ public class ApartmentService {
             if (request.getCurrentResidentId() != null) {
                 User resident = userRepository.findById(request.getCurrentResidentId())
                         .orElseThrow(() -> new ResourceNotFoundException("Resident not found with ID: " + request.getCurrentResidentId()));
+                validateResidentUser(resident);
                 apt.setCurrentResident(resident);
             } else if (apt.getOwner() != null) {
+                validateResidentUser(apt.getOwner());
                 apt.setCurrentResident(apt.getOwner());
             }
         }
@@ -265,7 +275,9 @@ public class ApartmentService {
             if (request.getNewResidentId() != null) {
                 newResident = userRepository.findById(request.getNewResidentId())
                         .orElseThrow(() -> new ResourceNotFoundException("Resident not found with ID: " + request.getNewResidentId()));
+                validateResidentUser(newResident);
             } else if (apt.getOwner() != null) {
+                validateResidentUser(apt.getOwner());
                 newResident = apt.getOwner();
             } else {
                 ApartmentRequest fallback = new ApartmentRequest();
@@ -275,6 +287,7 @@ public class ApartmentService {
                 fallback.setOwnerEmail(request.getOwnerEmail() != null ? request.getOwnerEmail() : apt.getOwnerEmail());
                 newResident = resolveOrCreateOwner(fallback, apt.getUnitNumber(), apt.getBuilding().getId());
                 if (newResident != null) {
+                    validateResidentUser(newResident);
                     apt.setOwner(newResident);
                     apt.setOwnerName(newResident.getName());
                     apt.setOwnerPhone(newResident.getPhoneNumber());
@@ -288,6 +301,7 @@ public class ApartmentService {
             }
             newResident = userRepository.findById(request.getNewResidentId())
                     .orElseThrow(() -> new ResourceNotFoundException("Resident tenant not found with ID: " + request.getNewResidentId()));
+            validateResidentUser(newResident);
             apt.setCurrentResident(newResident);
         }
 
@@ -303,13 +317,8 @@ public class ApartmentService {
 
     public List<OccupancyHistoryResponse> getOccupancyHistory(Long apartmentId) {
         User actor = directoryAccess.currentActor();
-        if ("SECURITY".equals(actor.getRole())) {
-            Apartment a = apartmentRepository.findById(apartmentId).orElseThrow(() -> new ResourceNotFoundException("Apartment not found"));
-            directoryAccess.requireReadAccess(actor, a.getBuilding().getId());
-        }
-        if (!apartmentRepository.existsById(apartmentId)) {
-            throw new ResourceNotFoundException("Apartment not found with ID: " + apartmentId);
-        }
+        Apartment a = apartmentRepository.findById(apartmentId).orElseThrow(() -> new ResourceNotFoundException("Apartment not found with ID: " + apartmentId));
+        directoryAccess.requireReadAccess(actor, a.getBuilding().getId());
         return occupancyHistoryRepository.findByApartmentIdOrderByCreatedAtDesc(apartmentId).stream()
                 .map(occupancyHistoryMapper::toResponse)
                 .toList();

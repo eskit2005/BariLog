@@ -37,6 +37,8 @@ public class DocumentService {
     private final NoticeRepository noticeRepository;
     private final ComplaintRepository complaintRepository;
     private final MaintenanceAgreementRepository maintenanceAgreementRepository;
+    private final com.barilog.repositories.ApartmentRepository apartmentRepository;
+    private final DirectoryAccessService directoryAccess;
 
     private final BuildingRuleMapper buildingRuleMapper;
     private final NoticeMapper noticeMapper;
@@ -52,6 +54,12 @@ public class DocumentService {
     private boolean isManagerOrAdmin(User user) {
         String role = user.getRole();
         return Role.MANAGER.name().equals(role) || Role.ADMIN.name().equals(role);
+    }
+
+    private boolean isResidentInManagedBuilding(User manager, User resident) {
+        if (resident == null) return false;
+        List<Apartment> apts = apartmentRepository.findByCurrentResidentId(resident.getId());
+        return apts.stream().anyMatch(a -> directoryAccess.canManageBuilding(manager, a.getBuilding()));
     }
 
     // ---------------------------------------------------------------------
@@ -127,9 +135,17 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public List<ComplaintResponse> getComplaints() {
         User user = authService.getLoggedUser();
-        List<Complaint> complaints = isManagerOrAdmin(user)
-                ? complaintRepository.findAllByOrderByCreatedAtDesc()
-                : complaintRepository.findByResidentIdOrderByCreatedAtDesc(user.getId());
+        List<Complaint> complaints;
+
+        if (Role.ADMIN.name().equals(user.getRole())) {
+            complaints = complaintRepository.findAllByOrderByCreatedAtDesc();
+        } else if (Role.MANAGER.name().equals(user.getRole())) {
+            complaints = complaintRepository.findAllByOrderByCreatedAtDesc().stream()
+                    .filter(c -> isResidentInManagedBuilding(user, c.getResident()))
+                    .toList();
+        } else {
+            complaints = complaintRepository.findByResidentIdOrderByCreatedAtDesc(user.getId());
+        }
 
         return complaints.stream().map(complaintMapper::toResponse).toList();
     }
@@ -155,6 +171,12 @@ public class DocumentService {
         Complaint complaint = complaintRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Complaint not found with ID: " + id));
 
+        if (!Role.ADMIN.name().equals(manager.getRole())) {
+            if (!isResidentInManagedBuilding(manager, complaint.getResident())) {
+                throw new org.springframework.security.access.AccessDeniedException("You do not have permission to resolve complaints for another manager's building");
+            }
+        }
+
         if (complaint.getStatus() == ComplaintStatus.RESOLVED) {
             throw new IllegalArgumentException("Complaint is already resolved");
         }
@@ -176,9 +198,17 @@ public class DocumentService {
     @Transactional(readOnly = true)
     public List<MaintenanceAgreementResponse> getMaintenanceAgreements() {
         User user = authService.getLoggedUser();
-        List<MaintenanceAgreement> agreements = isManagerOrAdmin(user)
-                ? maintenanceAgreementRepository.findAllByOrderByExpiryDateAsc()
-                : maintenanceAgreementRepository.findVisibleToResident(user.getId());
+        List<MaintenanceAgreement> agreements;
+
+        if (Role.ADMIN.name().equals(user.getRole())) {
+            agreements = maintenanceAgreementRepository.findAllByOrderByExpiryDateAsc();
+        } else if (Role.MANAGER.name().equals(user.getRole())) {
+            agreements = maintenanceAgreementRepository.findAllByOrderByExpiryDateAsc().stream()
+                    .filter(a -> a.getSubmittedBy().getId().equals(user.getId()) || isResidentInManagedBuilding(user, a.getSubmittedBy()))
+                    .toList();
+        } else {
+            agreements = maintenanceAgreementRepository.findVisibleToResident(user.getId());
+        }
 
         return agreements.stream().map(maintenanceAgreementMapper::toResponse).toList();
     }
@@ -218,6 +248,12 @@ public class DocumentService {
 
         MaintenanceAgreement agreement = maintenanceAgreementRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Maintenance agreement not found with ID: " + id));
+
+        if (!Role.ADMIN.name().equals(manager.getRole()) && !isManagerOrAdmin(agreement.getSubmittedBy())) {
+            if (!isResidentInManagedBuilding(manager, agreement.getSubmittedBy())) {
+                throw new org.springframework.security.access.AccessDeniedException("You do not have permission to acknowledge maintenance agreements for another manager's building");
+            }
+        }
 
         if (agreement.getStatus() == AgreementStatus.NOTED) {
             throw new IllegalArgumentException("Agreement is already marked as noted");

@@ -191,11 +191,13 @@ export const EditApartmentModal = ({ isOpen, onClose, apartment, onApartmentUpda
                   style={modalStyles.input}
                 >
                   <option value="">-- Enter owner manually or pick registered user --</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      #{u.id} {u.name} ({u.role || 'USER'}) {u.email ? `· ${u.email}` : ''}
-                    </option>
-                  ))}
+                  {users
+                    .filter((u) => u.role !== 'MANAGER' && u.role !== 'ADMIN')
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        #{u.id} {u.name} ({u.role || 'RESIDENT'}) {u.email ? `· ${u.email}` : ''}
+                      </option>
+                    ))}
                 </select>
               </div>
             )}

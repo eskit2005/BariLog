@@ -8,9 +8,9 @@ This file defines the intended 20-feature product scope. [README.md](README.md) 
 
 **Source review: 2026-11-18.** “Implemented” means code exists for the listed scope; it does not certify runtime behavior or production readiness. “Partial” means a subset exists. “Planned” means the full feature has no dedicated implementation in this checkout. The role responsibilities and feature bullets below describe target requirements unless explicitly marked **Current**.
 
-Current foundations include registration/login, JWT access tokens, refresh cookies, role checks, and user APIs. Application pages are Overview (`/`), Apartment Registry (`/apartments`), and Documents (`/documents`), plus login/register. Other sidebar modules are placeholders. Updates appear after fetches or actions; no live push transport is implemented.
+Current foundations include registration/login, JWT access tokens, refresh cookies, role checks, and user APIs. Application pages are Overview (`/` or `/overview`), Apartment Registry (`/apartments`), Resident Directory (`/directory`), and Documents (`/documents`), plus login/register. Other sidebar modules are placeholders. Updates appear after fetches or actions; no live push transport is implemented.
 
-Document records are filtered by role/submitter but have no building association or filtering by the selected building. Feature 04 adds consent-aware contact responses and assigned-security building scope.
+Document complaints and maintenance agreements are strictly scoped to the manager's assigned buildings (`isResidentInManagedBuilding`), and resolving complaints or acknowledging agreements for another manager's building is blocked with `403 Forbidden`. Building-level maintenance contracts (elevators, generators, fire safety) are transparently accessible by building owners and residents. Building managers and administrators are strictly decoupled from apartment tenancy. Feature 04 provides consent-aware contact responses, contact privacy preferences, and assigned-security building scope.
 
 ---
 
@@ -54,7 +54,7 @@ Document records are filtered by role/submitter but have no building association
 ### A. Apartment and Resident Management (Features 1–4)
 
 * **01. Apartment Registry and Occupancy Management** `[Assigned: Ibrahim]` `[Implemented]`
-  * **Current:** Building/floor creation, apartment specifications, owner/resident links, three occupancy states, elevation/list views, occupancy statistics, and transition history exist. Manager/admin writes and occupied-unit deletion protection are implemented. History has no edit endpoint, but is not a tamper-proof ledger.
+  * **Current:** Building/floor creation, apartment specifications, owner/resident links, three occupancy states, elevation/list views, occupancy statistics, and transition history exist. Manager/admin writes and occupied-unit deletion protection are implemented. Multi-building authorization ensures managers only access their assigned buildings. Managers/admins cannot be assigned as apartment residents/tenants (`400 Bad Request`). Owner-occupied units automatically track the owner user as resident. History has no edit endpoint, but is not a tamper-proof ledger.
   * Managers maintain building structure (towers, floors, unit numbers, unit sizes/sqft, BHK specs).
   * Real-time occupancy state tracking: Vacant, Rented, or Owner-Occupied.
   * History log of occupancy changes per unit.
@@ -66,13 +66,13 @@ Document records are filtered by role/submitter but have no building association
   * Dynamic apartment-to-resident assignments.
 
 * **03. Digital Document Repository** `[Partial]`
-  * **Current:** The `/documents` page and `/api/documents` API manage structured building rules, notices, complaints, and maintenance agreement records. V3 creates these tables and seeds 10 rules. Managers/admins create rules and notices, resolve complaints, and acknowledge agreements; residents submit complaints/agreements and see their own plus management agreements. Non-managers read active notices. On-demand expiry reminders exist for notices and agreements, including overdue agreements. File upload/download, general document types, configurable public/resident/committee access tiers, and background delivery of alerts remain planned.
+  * **Current:** The `/documents` page and `/api/documents` API manage structured building rules, notices, complaints, and maintenance agreement records. V3 creates these tables and seeds 10 rules. Managers/admins create rules and notices, resolve complaints, and acknowledge agreements; residents submit complaints/agreements and see their own plus management agreements. Complaints and maintenance agreements are strictly building-scoped: managers can only view and resolve complaints or agreements for residents in their managed buildings (`isResidentInManagedBuilding`). Building-level maintenance contracts (elevators, generators, fire safety) are marked `NOTED` and visible to all owners/tenants for transparency; flat-level contracts start `PENDING` until acknowledged by a manager. Non-managers read active notices. On-demand expiry reminders exist for notices and agreements. File upload/download, general document types, and background delivery of alerts remain planned.
   * Centralized digital storage for building bylaws, deed/title deeds, tenancy contracts, fire certificates, vendor contracts, and meeting minutes.
   * Granular role-based view/download permissions (public, resident-only, committee-only).
   * Document expiration tracking and alert reminders (e.g., lift license renewal, fire inspection expiry).
 
 * **04. Resident Directory and Emergency Contacts** `[Assigned: Ilham]` `[Implemented]`
-  * **Current:** `/directory` provides a building-scoped resident phonebook, separate default-off phone/email/emergency sharing preferences, and optional blood group, next-of-kin and physician records. Managers/admins maintain emergency profiles; assigned security has read access regardless of peer consent. Security assignment/revocation and admin manager association are included. Existing apartment/user responses respect contact privacy. Backend and transport tests and a client build cover this implementation; live push/alerts and broader privileged-account provisioning remain outside scope.
+  * **Current:** `/directory` provides a building-scoped resident phonebook, separate default-off phone/email/emergency sharing preferences (managed via `/api/directory/me/preferences` and `/api/directory/privacy`), and optional blood group, next-of-kin and physician records. Managers/admins maintain emergency profiles; assigned security and building managers retain emergency access regardless of peer consent. Security assignment/revocation and admin manager association are included. Existing apartment/user responses respect contact privacy. Multi-building isolation ensures managers only see directories for their assigned buildings. Backend and transport tests and a client build cover this implementation.
   * Controlled, privacy-conscious resident phonebook (opt-in phone/email visibility).
   * Emergency contacts register (blood group, emergency next-of-kin, physician).
   * One-click emergency contact access for building managers and security personnel.
@@ -107,7 +107,7 @@ Document records are filtered by role/submitter but have no building association
 ### C. Maintenance and Shared Resources (Features 9–13)
 
 * **09. Maintenance Complaint and Ticketing System** `[Partial]`
-  * **Current:** Residents file text complaints in the Documents module. Managers/admins view all and resolve them with a note. Only `OPEN` and `RESOLVED` exist; photos, location fields, priority, assignments, SLA tracking, and the remaining lifecycle states are planned.
+  * **Current:** Residents file text complaints in the Documents module. Managers view complaints only from residents in their managed buildings and resolve them with a note; resolving complaints in other managers' buildings is strictly forbidden (`403 Forbidden`). Only `OPEN` and `RESOLVED` exist; photos, location fields, priority, assignments, SLA tracking, and the remaining lifecycle states are planned.
   * Resident-facing ticket creation for personal flat or common areas (plumbing, electrical, elevator, masonry, pests).
   * Photo attachments, location tagging (flat vs. 3rd-floor corridor), priority tags (Low, Medium, High, Emergency).
   * Ticket status lifecycle: Open -> Assigned -> In Progress -> Resolved -> Closed -> Reopened.
@@ -122,7 +122,7 @@ Document records are filtered by role/submitter but have no building association
   * Checklists, service vendor logs, and historical maintenance track record.
 
 * **12. Repair Vendor and Quotation Management** `[Planned]`
-  * **Current:** The Documents module stores vendor name, service type, dates, and descriptions on maintenance agreements. A vendor directory, quotations, ratings, attachments, and completion sign-offs remain planned; agreement metadata alone does not implement this feature.
+  * **Current:** The Documents module stores vendor name, service type, dates, and descriptions on maintenance agreements. Contracts are split into Building-Level (managed infrastructure like lifts, generators; visible to all residents/owners) and Flat-Level (private in-unit contractor jobs submitted by residents, acknowledged by managers). A vendor directory, quotations, ratings, attachments, and completion sign-offs remain planned.
   * Vendor database (electricians, plumbers, lift manufacturers, painters) with rating and contact history.
   * Multi-quotation submission and comparison workflow for major repair projects.
   * Storage of vendor contracts, warranty certificates, and work completion sign-offs.

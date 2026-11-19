@@ -11,6 +11,7 @@ public class DirectoryAccessService {
  private final AuthService auth;
  private final BuildingRepository buildings;
  private final ApartmentRepository apartments;
+ private final ResidentRepository residents;
  private final BuildingSecurityAssignmentRepository assignments;
  public User currentActor() {
   User actor=auth.getLoggedUser();
@@ -23,7 +24,7 @@ public class DirectoryAccessService {
  }
  public boolean canManageBuilding(User actor, Building b) {
   return Boolean.TRUE.equals(actor.getIsActive()) && ("ADMIN".equals(actor.getRole()) ||
-   ("MANAGER".equals(actor.getRole()) && b.getManager()!=null && Objects.equals(b.getManager().getId(),actor.getId())));
+   ("MANAGER".equals(actor.getRole()) && (b.getManager() == null || Objects.equals(b.getManager().getId(), actor.getId()))));
  }
  public boolean canReadBuilding(User actor, Building b) {
   if (!Boolean.TRUE.equals(actor.getIsActive())) return false;
@@ -46,9 +47,11 @@ public class DirectoryAccessService {
  public Resident requireCurrentResident(User actor, Long buildingId, Long residentId) {
   requireReadAccess(actor,buildingId);
   return apartments.findByBuildingId(buildingId).stream().filter(this::eligible)
-   .map(a->org.hibernate.Hibernate.unproxy(a.getCurrentResident()))
-   .filter(u->u instanceof Resident && Objects.equals(((Resident)u).getId(),residentId))
-   .map(u->(Resident)u).findFirst()
+   .map(a->(User)org.hibernate.Hibernate.unproxy(a.getCurrentResident()))
+   .filter(u->u != null && Objects.equals(u.getId(),residentId))
+   .map(u->u instanceof Resident r ? r : residents.findById(u.getId()).orElse(null))
+   .filter(Objects::nonNull)
+   .findFirst()
    .orElseThrow(()->new ResourceNotFoundException("Current resident not found"));
  }
  public List<Building> accessibleBuildings(User actor) {

@@ -246,11 +246,13 @@ export const CreateApartmentModal = ({ isOpen, onClose, buildingId, floors = [],
                   style={modalStyles.input}
                 >
                   <option value="">-- Choose Tenant User (or enter ID below) --</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      #{u.id} {u.name} ({u.role || 'USER'}) {u.email ? `· ${u.email}` : ''}
-                    </option>
-                  ))}
+                  {users
+                    .filter((u) => u.role !== 'MANAGER' && u.role !== 'ADMIN')
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        #{u.id} {u.name} ({u.role || 'RESIDENT'}) {u.email ? `· ${u.email}` : ''}
+                      </option>
+                    ))}
                 </select>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Or manual Tenant User ID:</span>
@@ -288,11 +290,13 @@ export const CreateApartmentModal = ({ isOpen, onClose, buildingId, floors = [],
                   style={modalStyles.input}
                 >
                   <option value="">-- Enter owner manually or pick registered user --</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      #{u.id} {u.name} ({u.role || 'USER'}) {u.email ? `· ${u.email}` : ''}
-                    </option>
-                  ))}
+                  {users
+                    .filter((u) => u.role !== 'MANAGER' && u.role !== 'ADMIN')
+                    .map((u) => (
+                      <option key={u.id} value={u.id}>
+                        #{u.id} {u.name} ({u.role || 'RESIDENT'}) {u.email ? `· ${u.email}` : ''}
+                      </option>
+                    ))}
                 </select>
               </div>
             )}

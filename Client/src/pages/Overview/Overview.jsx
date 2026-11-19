@@ -11,7 +11,7 @@ export const Overview = () => {
   const modules = [
     {
       title: 'Resident Directory',
-      feature: 'Feature 03 (Active)',
+      feature: 'Feature 04 (Active)',
       desc: 'Building-scoped resident phonebook, contact sharing preferences, and authorized emergency contacts register.',
       icon: Users,
       path: '/directory',

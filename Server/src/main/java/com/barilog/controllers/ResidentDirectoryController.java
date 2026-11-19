@@ -12,6 +12,10 @@ public class ResidentDirectoryController {
  @GetMapping("/directory/buildings") public List<BuildingResponse> buildings(){return service.buildings();}
  @GetMapping("/directory/me/preferences") public DirectoryPreferencesResponse preferences(){return service.preferences();}
  @PutMapping("/directory/me/preferences") public DirectoryPreferencesResponse preferences(@Valid @RequestBody DirectoryPreferencesRequest p){return service.updatePreferences(p);}
+ @PatchMapping("/directory/me/preferences") public DirectoryPreferencesResponse patchPreferences(@Valid @RequestBody DirectoryPreferencesRequest p){return service.updatePreferences(p);}
+ @GetMapping("/directory/me/emergency") public EmergencyContactResponse myEmergency(){return service.myEmergency();}
+ @PutMapping("/directory/me/emergency") public EmergencyContactResponse updateMyEmergency(@Valid @RequestBody EmergencyContactRequest p){return service.updateMyEmergency(p);}
+ @PutMapping("/directory/me/phone") public java.util.Map<String, String> updateMyPhone(@RequestBody java.util.Map<String, String> body){String p=service.updateMyPhone(body.get("phoneNumber"));return java.util.Map.of("phoneNumber",p!=null?p:"");}
  @GetMapping("/buildings/{buildingId}/directory") public List<DirectoryResidentResponse> directory(@PathVariable Long buildingId){return service.directory(buildingId);}
  @GetMapping("/buildings/{buildingId}/directory/{residentId}/emergency") public EmergencyContactResponse emergency(@PathVariable Long buildingId,@PathVariable Long residentId){return service.emergency(buildingId,residentId);}
  @PutMapping("/buildings/{buildingId}/directory/{residentId}/emergency") public EmergencyContactResponse emergency(@PathVariable Long buildingId,@PathVariable Long residentId,@Valid @RequestBody EmergencyContactRequest p){return service.updateEmergency(buildingId,residentId,p);}
