@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import { AuthContext } from '../../context/AuthContext';
@@ -10,8 +10,14 @@ export const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { loginUser } = useContext(AuthContext);
+  const { user, loginUser } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +25,7 @@ export const Login = () => {
     setLoading(true);
     try {
       await loginUser(email, password);
-      navigate('/apartments');
+      navigate('/');
     } catch (err) {
       setError(err.message || 'Invalid email or password');
     } finally {

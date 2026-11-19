@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { 
   Building2, 
   FileText, 
@@ -41,7 +41,9 @@ export const Sidebar = ({ user, onLogout }) => {
     <aside style={styles.sidebar}>
       {/* Brand Header */}
       <div style={styles.brandContainer}>
-        <Logo size={28} showWordmark={true} />
+        <Link to="/" style={{ textDecoration: 'none', color: 'inherit', display: 'inline-flex' }}>
+          <Logo size={28} showWordmark={true} />
+        </Link>
       </div>
 
       {/* Navigation Groups */}
