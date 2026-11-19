@@ -8,6 +8,7 @@ import io.jsonwebtoken.security.Keys;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.SecretKey;
 import java.util.Base64;
 import java.util.Date;
 
@@ -25,6 +26,18 @@ public class JwtService {
         return generateToken(user, jwtConfig.getRefreshTokenExpiration());
     }
 
+    private SecretKey getSigningKey() {
+        String secret = jwtConfig.getSecret();
+        if (secret == null || secret.isBlank() || secret.startsWith("${")) {
+            throw new IllegalStateException("JWT_SECRET is not configured or resolved. Please ensure JWT_SECRET is set in your .env file or environment variables.");
+        }
+        try {
+            return Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("JWT_SECRET is not a valid Base64 string: " + e.getMessage(), e);
+        }
+    }
+
     private String generateToken(User user, long tokenExpiration) {
         return Jwts.builder()
                 .subject(user.getId().toString())
@@ -32,7 +45,7 @@ public class JwtService {
                 .claim("role", user.getRole())
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + (1000 * tokenExpiration)))
-                .signWith(Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtConfig.getSecret())))
+                .signWith(getSigningKey())
                 .compact();
     }
 
@@ -46,7 +59,7 @@ public class JwtService {
 
     private Claims getClaims(String token) {
         return Jwts.parser()
-                .verifyWith(Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtConfig.getSecret())))
+                .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
